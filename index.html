@@ -1,0 +1,989 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Petpooja Inventory Entry Flow</title>
+<style>
+
+:root{
+  --bg:#f5f5f7;--paper:#fff;--ink:#1d1d1f;--muted:#6e6e73;--line:#d2d2d7;
+  --nav:#1d1d1f;--navdim:#a1a1a6;--accent:#0071e3;--accentsoft:#0071e314;
+  --path:#0071e3;--dim:#e8e8ed;--radius:3px;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:13.5px/1.45 var(--font);-webkit-font-smoothing:antialiased}
+button{font:inherit;cursor:pointer}
+.app{height:100vh;display:grid;grid-template-rows:44px auto minmax(0,1fr)}
+.nav{background:var(--nav);color:#f5f5f7;display:flex;align-items:center;gap:14px;padding:0 18px;font-size:12px}
+.nav .brand{font-weight:600;letter-spacing:.01em;white-space:nowrap}
+.nav .tabs{display:flex;gap:2px;flex:1;overflow:auto}
+.nav .tabs button{background:transparent;border:0;color:var(--navdim);padding:8px 10px;border-radius:3px;font-size:12px;white-space:nowrap}
+.nav .tabs button:hover{color:#fff}.nav .tabs button.active{color:#fff;background:#ffffff14}
+.nav .right{display:flex;gap:8px}
+.nav .right button{background:transparent;border:1px solid #424245;color:#f5f5f7;border-radius:980px;padding:4px 10px;font-size:11px}
+.nav .right button:hover{background:#ffffff14}
+.sub{background:var(--paper);border-bottom:1px solid var(--line);padding:12px 18px 10px}
+.sub h1{margin:0;font-size:20px;font-weight:600;letter-spacing:-.02em}
+.sub p{margin:4px 0 0;color:var(--muted);font-size:12.5px;max-width:980px}
+.flowbar{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.chip{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:980px;padding:6px 11px;font-size:12px;font-weight:500}
+.chip:hover{background:#f5f5f7}.chip.active{background:var(--ink);border-color:var(--ink);color:#fff}
+.chip .n{opacity:.5;margin-right:4px}
+.work{display:grid;grid-template-columns:minmax(0,1fr) 400px;min-height:0}
+.canvas{min-width:0;min-height:0;display:flex;flex-direction:column}
+.tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 14px;background:var(--paper);border-bottom:1px solid var(--line);font-size:11.5px;color:var(--muted)}
+.tools b{color:var(--ink)}.tools .sp{flex:1}
+.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:980px;padding:3px 8px;background:#fff}
+.pill i{width:14px;height:3px;border-radius:2px;background:#8aa3c4;display:inline-block}
+.pill i.in{background:#7a9e8a}.pill i.out{background:#c4928e}.pill i.con{background:#8aa3c4}
+.pill i.link{width:16px;height:0;border-top:2px dashed #b7a58a;background:0;border-radius:0}
+.pill i.info{background:#9aa3ad}
+.diagram{flex:1;overflow:auto;padding:16px 14px 24px;background:var(--bg)}
+.diagram svg{display:block;width:100%;min-width:1100px;height:auto}
+.legend{padding:8px 14px;background:var(--paper);border-top:1px solid var(--line);font-size:11.5px;color:var(--muted)}
+.panelpage{padding:16px 18px 28px;overflow:auto;background:var(--bg)}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);margin-bottom:12px;overflow:hidden}
+.card h2{margin:0;padding:12px 14px;font-size:14px;font-weight:600;border-bottom:1px solid var(--line)}
+.card .pad{padding:14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{padding:12px 14px;border:1px solid var(--line);background:#fff;border-radius:var(--radius)}
+.stat strong{display:block;font-size:20px;letter-spacing:-.02em}.stat span{font-size:11.5px;color:var(--muted)}
+.mod{text-align:left;width:100%;border:1px solid var(--line);background:#fff;border-radius:var(--radius);padding:12px;color:var(--ink)}
+.mod:hover{border-color:#86868b}.mod strong{display:block;font-size:13px}.mod small{display:block;margin-top:4px;color:var(--muted);line-height:1.4}
+.data-table{width:100%;border-collapse:collapse;font-size:11.5px}
+.data-table th{text-align:left;font-size:10px;color:var(--muted);padding:8px 10px;background:#fbfbfd;border-bottom:1px solid var(--line);position:sticky;top:0}
+.data-table td{padding:8px 10px;border-bottom:1px solid #ececef;vertical-align:top;color:#424245}
+.mono{font-family:var(--mono);font-size:11px;color:#424245}
+.catalog{display:grid;grid-template-columns:280px 1fr;gap:12px;min-height:60vh}
+.result-list{max-height:70vh;overflow:auto}
+.result{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid #ececef;background:transparent;padding:10px 12px}
+.result:hover{background:#f5f5f7}.result.selected{background:var(--accentsoft);box-shadow:inset 2px 0 var(--accent)}
+.result strong{display:block;font-size:12px}.result .sub{font-size:10.5px;color:var(--muted);margin-top:2px}
+.ssgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.sscell{border:1px solid var(--line);background:#fff;border-radius:var(--radius);padding:10px;min-height:72px}
+.sscell .c{font-weight:700;font-size:11px;color:var(--accent)}.sscell b{display:block;font-size:12px;margin:2px 0}.sscell span{font-size:10.5px;color:var(--muted)}
+.callout{border:1px solid var(--line);border-left:2px solid #86868b;background:#fbfbfd;padding:10px 12px;font-size:12.5px;color:#424245;border-radius:var(--radius)}
+.callout b{color:var(--ink)}
+/* svg */
+.node{cursor:pointer}
+.node .box{fill:#fff;stroke:#c7c7cc;stroke-width:1}
+.node text{font-family:var(--font);fill:var(--ink);font-size:12px;font-weight:600;pointer-events:none}
+.node .sub{font-size:10.5px;font-weight:400;fill:var(--muted)}
+.node .meta{font-size:9.5px;font-weight:500;fill:#86868b;font-family:var(--mono)}
+.node.dim .box{fill:#fcfcfd;stroke:#e8e8ed}
+.node.dim text{fill:#8e8e93;opacity:.92}.node.dim .sub,.node.dim .meta{fill:#aeaeb2}
+.node.on .box,.node:hover .box{stroke:var(--path);stroke-width:1.75}
+.node.soft .box{stroke:#aeb4bc}
+.node.selected .box{stroke:var(--ink);stroke-width:2}
+.badge-bg{fill:#1d1d1f}.badge{font-size:9px;font-weight:600;fill:#fff}
+.edge{fill:none;stroke:#c9cdd3;stroke-width:1.35;pointer-events:stroke;cursor:pointer}
+.edge.link{stroke:#b7a58a;stroke-dasharray:6 5;stroke-width:1.3} /* doc join, no stock */
+.edge.stockin{stroke:#7a9e8a} /* goods / qty into stock */
+.edge.stockout{stroke:#c4928e} /* goods / qty leaving stock */
+.edge.consume{stroke:#8aa3c4} /* POS theoretical use */
+.edge.info{stroke:#9aa3ad} /* summary / informational */
+.edge.dash{stroke-dasharray:6 5}
+.edge.on{stroke-width:2.35;filter:none}
+.edge.link.on{stroke:#9a7b4f}
+.edge.stockin.on{stroke:#3f7a5c}
+.edge.stockout.on{stroke:#b85c55}
+.edge.consume.on{stroke:#4a6fa5}
+.edge.info.on{stroke:#5c6b7a}
+.edge.dim{stroke:##d5d7dc;stroke-width:1.1;opacity:.42}
+.edge:hover{stroke-width:2.1}
+.elabel{font-size:9.5px;fill:#8b9098;font-weight:500;pointer-events:none}
+.elabel.link{fill:#9a7b4f}.elabel.stockin{fill:#3f7a5c}.elabel.stockout{fill:#b85c55}
+.elabel.consume{fill:#4a6fa5}.elabel.info{fill:#5c6b7a}
+.elabel.on{font-weight:650}
+.lane{font-size:9.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;fill:#86868b}
+/* insp */
+.insp{border-left:1px solid var(--line);background:var(--paper);min-height:0;overflow:auto}
+.insp-empty{padding:40px 20px;text-align:center;color:var(--muted)}
+.insp-head{padding:16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);z-index:2}
+.insp-head .eye{font-size:11px;color:var(--muted)}.insp-head h2{margin:4px 0 6px;font-size:17px;font-weight:600;letter-spacing:-.02em}
+.insp-head p{margin:0;color:var(--muted);font-size:12.5px}
+.pathsteps{display:flex;flex-wrap:wrap;gap:4px;margin-top:10px}
+.pathsteps span{border:1px solid var(--line);border-radius:2px;padding:3px 7px;font-size:10.5px;color:var(--muted);background:#fbfbfd}
+.pathsteps span.on{border-color:var(--path);color:var(--path);background:var(--accentsoft)}
+.insp-body{padding:12px 16px 24px;display:grid;gap:10px}
+.panel{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.panel h3{margin:0;padding:8px 10px;font-size:11px;font-weight:600;color:var(--muted);background:#fbfbfd;border-bottom:1px solid var(--line)}
+.panel .p{padding:10px}
+.kv{display:grid;grid-template-columns:112px 1fr;gap:5px 8px;font-size:12px}
+.kv b{color:var(--muted);font-weight:500}.kv span{overflow-wrap:anywhere}
+.ex{border:1px solid var(--line);border-radius:var(--radius);padding:10px 11px;background:#fbfbfd;font-size:12.5px;line-height:1.5}
+.ex strong{display:block;margin-bottom:4px;font-size:12px}
+.ex .rule{margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-family:var(--mono);font-size:11px;white-space:pre-wrap;color:#424245}
+.steps{margin:0;padding-left:16px}.steps li{margin:5px 0;font-size:12.5px;color:#424245}
+.coltable{width:100%;border-collapse:collapse;font-size:11.5px}
+.coltable th,.coltable td{padding:6px 9px;border-bottom:1px solid #ececef;text-align:left;vertical-align:top}
+.coltable th{font-size:10px;color:var(--muted);background:#fbfbfd}
+.btn{border:1px solid var(--line);background:#fff;border-radius:980px;padding:6px 11px;font-size:12px;font-weight:500}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.tag{display:inline-flex;border:1px solid var(--line);border-radius:980px;padding:2px 7px;font-size:10.5px;color:var(--muted);background:#fff}
+.tag.on{border-color:var(--path);color:var(--path);background:var(--accentsoft)}
+@media(max-width:1100px){.work{grid-template-columns:1fr}.insp{border-left:0;border-top:1px solid var(--line);max-height:40vh}.catalog,.grid2,.grid3,.ssgrid{grid-template-columns:1fr}}
+
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="nav">
+    <div class="brand">Petpooja</div>
+    <div class="tabs" id="navLinks"></div>
+    <div class="right">
+      <button type="button" id="btnResetPath">Reset path</button>
+      <button type="button" id="btnDl">Download</button>
+    </div>
+  </nav>
+  <div class="sub">
+    <h1 id="title">Inventory entry flow</h1>
+    <p id="subtitle">One page: all flows, schema, clean map, codes. Full diagram visible by default — click a node to lock its path.</p>
+    <div class="flowbar" id="flowbar"></div>
+  </div>
+  <div class="work"></div>
+</div>
+<script id="schema" type="application/json">{"raw_materials": [{"no": "1.0", "name": "id", "dummy": "1.6446513E7", "desc": "Primary Key", "ds": ""}, {"no": "2.0", "name": "restaurant_id", "dummy": "38823.0", "desc": "Primary Key of restaurant_id", "ds": ""}, {"no": "3.0", "name": "ho", "dummy": "1.6279795E7", "desc": "Ho id", "ds": ""}, {"no": "4.0", "name": "name", "dummy": "Deshi Fried Noodles (200 Gm*10)", "desc": "Name of the raw material", "ds": ""}, {"no": "5.0", "name": "short_name", "dummy": "deshi fried noodles", "desc": "Short name of the raw material", "ds": ""}, {"no": "6.0", "name": "type", "dummy": "R", "desc": "R'=>'Raw Material','S'=>'Semi Cooked'", "ds": ""}, {"no": "7.0", "name": "unit1", "dummy": "0.0", "desc": "N/A", "ds": ""}, {"no": "8.0", "name": "consumption_unit", "dummy": "3177033.0", "desc": "unit of consumption (primary id of `restaurant_units`)", "ds": ""}, {"no": "9.0", "name": "conversion_qty", "dummy": "2000.0", "desc": "quantity to convert purchase unit to consumption unit", "ds": "Not able to understand this column"}, {"no": "10.0", "name": "unit", "dummy": "819549.0", "desc": "unit of perchase (primary id of `restaurant_units`)", "ds": "What is difference between consumption_unit and unit column ?"}, {"no": "11.0", "name": "old_unit", "dummy": "0.0", "desc": "N/A", "ds": ""}, {"no": "12.0", "name": "description", "dummy": "-", "desc": "Description of raw material", "ds": ""}, {"no": "13.0", "name": "minimum_stock", "dummy": "0.0", "desc": "Minimum Stock Level", "ds": ""}, {"no": "14.0", "name": "maximum_stock", "dummy": "0.0", "desc": "Maximum Stock Level", "ds": ""}, {"no": "15.0", "name": "at_par_stock", "dummy": "0.0", "desc": "At Par Stock Level", "ds": "What is the meaning of \"Par\" ?"}, {"no": "16.0", "name": "status", "dummy": "1.0", "desc": "1= Active, -9= deleted, 0= inactive", "ds": ""}, {"no": "17.0", "name": "configuration", "dummy": "-", "desc": "N/A", "ds": ""}, {"no": "18.0", "name": "hsn_code", "dummy": "-", "desc": "HSN code", "ds": ""}, {"no": "19.0", "name": "sap_code", "dummy": "-", "desc": "SAP Code", "ds": ""}, {"no": "20.0", "name": "price", "dummy": "286.0", "desc": "Purchase Price", "ds": ""}, {"no": "21.0", "name": "sale_price", "dummy": "286.0", "desc": "Internal Transfer/Sale Price", "ds": ""}, {"no": "22.0", "name": "reconciliation_price", "dummy": "0.0", "desc": "Reconciliation Price", "ds": "Not able to understand this column"}, {"no": "23.0", "name": "gst_per", "dummy": "12.0", "desc": "tax %", "ds": ""}, {"no": "24.0", "name": "favorite", "dummy": "0.0", "desc": "1= Yes", "ds": ""}, {"no": "25.0", "name": "category", "dummy": "Dry Food", "desc": "category of raw material", "ds": ""}, {"no": "26.0", "name": "yield_qty", "dummy": "0.0", "desc": "Normal loss (%)", "ds": "Not able to understand this column"}, {"no": "27.0", "name": "standard_qty", "dummy": "0.0", "desc": "N/A", "ds": ""}, {"no": "28.0", "name": "at_par_stock_unit", "dummy": "0.0", "desc": "unit of At Par Stock Level(primary id of `restaurant_units`)", "ds": "What is the meaning of \"Par\" ?"}, {"no": "29.0", "name": "minimum_stock_unit", "dummy": "0.0", "desc": "unit Minimum Stock Level(primary id of `restaurant_units`)", "ds": ""}, {"no": "30.0", "name": "calculated_on", "dummy": "0.0", "desc": "0=Daily, 1=Weekly, 2=By Weekly, 3=Monthly, 4=Yearly", "ds": ""}, {"no": "31.0", "name": "container_info", "dummy": "-", "desc": "N/A", "ds": ""}, {"no": "32.0", "name": "is_in_cess_tax", "dummy": "0.0", "desc": "1 = include material in cess tax, 0 = do not include", "ds": ""}, {"no": "33.0", "name": "cess_tax_percentage", "dummy": "0.0", "desc": "Cess Tax Percentage", "ds": ""}, {"no": "34.0", "name": "is_private", "dummy": "0.0", "desc": "0=no, 1=yes", "ds": "Not able to understand this column"}, {"no": "35.0", "name": "tax_type", "dummy": "0.0", "desc": "0= gst, 1=vat", "ds": ""}, {"no": "36.0", "name": "excise_duty", "dummy": "0.0", "desc": "Excise Duty", "ds": ""}, {"no": "37.0", "name": "consumption_type", "dummy": "0.0", "desc": "0'=>'Weighted Average','1'=>'Fifo','2'=>'Lifo'", "ds": ""}, {"no": "38.0", "name": "created", "dummy": "43596.99388888889", "desc": "timestamp of the entry created.", "ds": ""}, {"no": "39.0", "name": "modified", "dummy": "43596.99388888889", "desc": "timestamp of last modified.", "ds": ""}, {"no": "40.0", "name": "created_by", "dummy": "34895.0", "desc": "created by ID", "ds": ""}, {"no": "41.0", "name": "createdby_username", "dummy": "Limbraj More", "desc": "created by name", "ds": ""}, {"no": "42.0", "name": "is_expiry", "dummy": "0.0", "desc": "1= Yes, 0=No", "ds": ""}, {"no": "43.0", "name": "desktop_datetime", "dummy": "", "desc": "N/A", "ds": ""}, {"no": "44.0", "name": "old_id", "dummy": "4.0", "desc": "N/A", "ds": ""}, {"no": "45.0", "name": "is_update", "dummy": "0.0", "desc": "N/A", "ds": ""}, {"no": "46.0", "name": "unique_instance_id", "dummy": "28.0", "desc": "Unique instance id", "ds": ""}, {"no": "47.0", "name": "use_in_item_onoff", "dummy": "0.0", "desc": "item on off in online menu based on this raw material stock", "ds": "Not able to understand this column"}, {"no": "48.0", "name": "min_qty", "dummy": "0.0", "desc": "N/A", "ds": ""}, {"no": "49.0", "name": "min_qty_unit", "dummy": "0.0", "desc": "N/A", "ds": ""}, {"no": "50.0", "name": "qty", "dummy": "0.0", "desc": "Quantity (in gm/ml)", "ds": "Need to confirm"}, {"no": "51.0", "name": "gtin", "dummy": "", "desc": "GTIN", "ds": ""}, {"no": "52.0", "name": "brand", "dummy": "", "desc": "raw material brand name", "ds": ""}, {"no": "53.0", "name": "sub_category", "dummy": "", "desc": "N/A", "ds": ""}, {"no": "54.0", "name": "sub_categorywise_rm_rank", "dummy": "0.0", "desc": "N/A", "ds": ""}, {"no": "55.0", "name": "allow_decimal_qty", "dummy": "1.0", "desc": "Decimal Allowed", "ds": ""}], "restaurant_units": [{"no": "1.0", "name": "id", "dummy": "840084.0", "desc": "Primary Key", "ds": ""}, {"no": "2.0", "name": "restaurant_id", "dummy": "38823.0", "desc": "Primary id of restaurant table", "ds": ""}, {"no": "3.0", "name": "master_unit_id", "dummy": "0.0", "desc": "N/A", "ds": ""}, {"no": "4.0", "name": "display_name", "dummy": "KGSs", "desc": "Name of unit", "ds": ""}, {"no": "5.0", "name": "ho", "dummy": "0.0", "desc": "HO id", "ds": ""}, {"no": "6.0", "name": "created", "dummy": "43596.99388888889", "desc": "timestamp of the entry created.", "ds": ""}, {"no": "7.0", "name": "modified", "dummy": "43596.99388888889", "desc": "timestamp of last modified.", "ds": ""}, {"no": "8.0", "name": "unique_instance_id", "dummy": "28.0", "desc": "Unique instance id", "ds": ""}], "po_request": [{"no": "1.0", "name": "id", "dummy": "4.6858271E7", "desc": "Primary Key", "ds": ""}, {"no": "2.0", "name": "restaurant_id", "dummy": "107453.0", "desc": "Primary key of restaurant table", "ds": ""}, {"no": "3.0", "name": "receiver_id", "dummy": "46499.0", "desc": "restaurant/kitchen id of Po_request receiver", "ds": ""}, {"no": "4.0", "name": "receiver_type", "dummy": "C", "desc": "R'=>'Restaurant','C'=>'Central Kitchen','S'=>'Supplier','ST'=>'Store'", "ds": ""}, {"no": "5.0", "name": "ship_bill_outlet_id", "dummy": "0.0", "desc": "N/A", "ds": ""}, {"no": "6.0", "name": "sap_group_master_id", "dummy": "0.0", "desc": "N/A", "ds": ""}, {"no": "7.0", "name": "request_date", "dummy": "45100.0", "desc": "Date of request", "ds": ""}, {"no": "8.0", "name": "request_number", "dummy": "PO0046858271", "desc": "request number", "ds": ""}, {"no": "9.0", "name": "mrn_no", "dummy": "126.0", "desc": "MRN no", "ds": ""}, {"no": "10.0", "name": "change_details", "dummy": "", "desc": "modification logs releted to purchase", "ds": ""}, {"no": "11.0", "name": "item_details", "dummy": "", "desc": "item details json", "ds": ""}, {"no": "12.0", "name": "total", "dummy": "32210.8", "desc": "total PO amount", "ds": ""}, {"no": "13.0", "name": "roundoff", "dummy": "0.0", "desc": "roundoff", "ds": ""}, {"no": "14.0", "name": "total_tax", "dummy": "3892.74", "desc": "total tax", "ds": ""}, {"no": "15.0", "name": "terms_of_payment", "dummy": "-", "desc": "terms_of_payment", "ds": ""}, {"no": "16.0", "name": "terms_of_delivery", "dummy": "-", "desc": "terms_of_delivery", "ds": ""}, {"no": "17.0", "name": "rm_category", "dummy": "", "desc": "raw material category", "ds": ""}, {"no": "18.0", "name": "ship_to_bill_to_total", "dummy": "0.0", "desc": "N/A", "ds": ""}, {"no": "19.0", "name": "record_status", "dummy": "0.0", "desc": "\t0 = Cancelled, 1 = Saved, 2 = Sent", "ds": ""}, {"no": "20.0", "name": "status", "dummy": "0.0", "desc": "\t0 = Inactive, 1 = Active", "ds": ""}, {"no": "21.0", "name": "is_view", "dummy": "0.0", "desc": "0 = unread, 1 = read", "ds": ""}, {"no": "22.0", "name": "name", "dummy": "Radhakrishna Foodland Pvt Ltd - Mumbai", "desc": "restaurant/kitchen name", "ds": ""}, {"no": "23.0", "name": "rest_details", "dummy": "", "desc": "sender receiver details", "ds": ""}, {"no": "24.0", "name": "is_editable", "dummy": "1.0", "desc": "0 = non editable, 1 = editable", "ds": ""}, {"no": "25.0", "name": "created_by", "dummy": "134707.0", "desc": "po_request created user id", "ds": ""}, {"no": "26.0", "name": "createdby_user_type", "dummy": "W", "desc": "N/A", "ds": ""}, {"no": "27.0", "name": "createdby_username", "dummy": "AJ & Co (Mumbai Central)", "desc": "po_request created user name", "ds": ""}, {"no": "28.0", "name": "created", "dummy": "45413.00859953704", "desc": "timestamp of the entry created.", "ds": ""}, {"no": "29.0", "name": "modified", "dummy": "45413.00859953704", "desc": "timestamp of last modified.", "ds": ""}, {"no": "30.0", "name": "type", "dummy": "PO", "desc": "N/A", "ds": ""}, {"no": "31.0", "name": "unique_instance_id", "dummy": "28.0", "desc": "unique_instance_id", "ds": ""}, {"no": "32.0", "name": "paid_amount", "dummy": "0.0", "desc": "paid_amount", "ds": ""}, {"no": "33.0", "name": "payment_date", "dummy": "", "desc": "payment_date", "ds": ""}, {"no": "34.0", "name": "payment_flag", "dummy": "0.0", "desc": "\t0 = Unpaid, 1 = Paid", "ds": ""}, {"no": "35.0", "name": "payment_mode", "dummy": "1.0", "desc": "1 = Cash, 2 = Card, 3 = Cheque, 4 = Other, 5 = Online", "ds": ""}, {"no": "36.0", "name": "payment_ref_no", "dummy": "", "desc": "N/A", "ds": ""}], "po_requests_item_detail_reports": [{"no": "1.0", "name": "pkid", "dummy": "781026.0", "desc": "Primary key", "ds": ""}, {"no": "2.0", "name": "id", "dummy": "0.0", "desc": "N/A", "ds": ""}, {"no": "3.0", "name": "restaurant_id", "dummy": "107453.0", "desc": "primary key of restaurants table", "ds": ""}, {"no": "4.0", "name": "po_id", "dummy": "4.6858271E7", "desc": "primary id of po_request table", "ds": ""}, {"no": "5.0", "name": "item_id", "dummy": "4169976.0", "desc": "primary key of raw material table", "ds": ""}, {"no": "6.0", "name": "itemname", "dummy": "French Fries", "desc": "item name", "ds": ""}, {"no": "7.0", "name": "unit", "dummy": "1057866.0", "desc": "Item unit id", "ds": ""}, {"no": "8.0", "name": "lbl_unit", "dummy": "CAS", "desc": "lable unit", "ds": ""}, {"no": "9.0", "name": "qty", "dummy": "3.0", "desc": "Quantity", "ds": ""}, {"no": "10.0", "name": "price", "dummy": "1601.75", "desc": "price", "ds": ""}, {"no": "11.0", "name": "amount", "dummy": "4805.25", "desc": "price*quantity", "ds": ""}, {"no": "12.0", "name": "hsn_code", "dummy": "", "desc": "HSN code", "ds": ""}, {"no": "13.0", "name": "description", "dummy": "", "desc": "description", "ds": ""}, {"no": "14.0", "name": "request_date", "dummy": "45100.0", "desc": "request_date", "ds": ""}, {"no": "15.0", "name": "category", "dummy": "closing inventory", "desc": "raw material category", "ds": ""}, {"no": "16.0", "name": "created", "dummy": "45100.01", "desc": "timestamp of the entry created.", "ds": ""}, {"no": "17.0", "name": "modified", "dummy": "45100.01", "desc": "timestamp of last modified.", "ds": ""}, {"no": "18.0", "name": "unique_instance_id", "dummy": "28.0", "desc": "unique_instance_id", "ds": ""}], "purchase_master": [{"no": "1.0", "name": "id", "dummy": "6.9850527E7", "desc": "Primary Key", "ds": ""}, {"no": "2.0", "name": "restaurant_id", "dummy": "38823.0", "desc": "Primary Key of restaurant id", "ds": ""}, {"no": "3.0", "name": "type", "dummy": "PU", "desc": "PU'=>'Purchase','IT'=>'Internal Transfer','MS'=>'Manual Stock','ITOLD'=>'Internal Transfer Old Data','ITU'=>'Internal Transfer Unit Conversion','SR'=>'Sale Return'", "ds": "Not able to understand this column"}, {"no": "4.0", "name": "po_id", "dummy": "6.5749882E7", "desc": "primary id of sales table", "ds": ""}, {"no": "5.0", "name": "po_type", "dummy": "SO", "desc": "PO' = purchase order, 'SO' = sales order(if central kitchen has generated ticket (without restaurant has raised the po)and restaurant has accepted it will be 'SO' else if restaurant has raised po or directly created purchase entry then 'PO')", "ds": "Not able to understand this column"}, {"no": "6.0", "name": "receiver_id", "dummy": "131771.0", "desc": "central kitchen/restaurant/suppliers id", "ds": ""}, {"no": "7.0", "name": "receiver_type", "dummy": "C", "desc": "R'=>'Restaurant','C'=>'Central Kitchen','S'=>'Supplier','ST'=>'Store'\t", "ds": ""}, {"no": "8.0", "name": "ship_bill_outlet_id", "dummy": "0.0", "desc": "N/A", "ds": ""}, {"no": "9.0", "name": "sap_group_master_id", "dummy": "0.0", "desc": "N/A", "ds": ""}, {"no": "10.0", "name": "invoice_date", "dummy": "45444.0", "desc": "Date of invoice", "ds": ""}, {"no": "11.0", "name": "invoice_number", "dummy": "PO0059137797", "desc": "Invoice number", "ds": ""}, {"no": "12.0", "name": "mrn_no", "dummy": "360.0", "desc": "MRN number", "ds": "What is MRN number ?"}, {"no": "13.0", "name": "change_details", "dummy": "", "desc": "modification logs releted to purchase", "ds": ""}, {"no": "14.0", "name": "item_details", "dummy": "", "desc": "raw material releted details", "ds": ""}, {"no": "15.0", "name": "total", "dummy": "107807.0", "desc": "total", "ds": ""}, {"no": "16.0", "name": "roundoff", "dummy": "0.072", "desc": "roundoff", "ds": ""}, {"no": "17.0", "name": "paid_amount", "dummy": "0.0", "desc": "paid amount", "ds": ""}, {"no": "18.0", "name": "record_status", "dummy": "1.0", "desc": "0 = Cancelled, 1 = Saved, 2 = Sent        ", "ds": "Not able to understand this column"}, {"no": "19.0", "name": "status", "dummy": "1.0", "desc": "0 = Inactive, 1 = Active", "ds": ""}, {"no": "20.0", "name": "update_stock", "dummy": "1.0", "desc": "1'=>'Yes','0'=>'No'", "ds": ""}, {"no": "21.0", "name": "payment_flag", "dummy": "0.0", "desc": "\t0 = Unpaid, 1 = Paid", "ds": ""}, {"no": "22.0", "name": "payment_date", "dummy": "", "desc": "Date of payment", "ds": ""}, {"no": "23.0", "name": "payment_mode", "dummy": "1.0", "desc": "1 = Cash, 2 = Card, 3 = Cheque, 4 = Other, 5 = Online", "ds": ""}, {"no": "24.0", "name": "gst_no", "dummy": "", "desc": "GST No", "ds": ""}, {"no": "25.0", "name": "total_tax", "dummy": "13368.43", "desc": "total tax", "ds": ""}, {"no": "26.0", "name": "total_discount", "dummy": "0.0", "desc": "discount", "ds": ""}, {"no": "27.0", "name": "discount_type", "dummy": "0.0", "desc": "\t0=>'fixed',1 => 'Percentage'", "ds": ""}, {"no": "28.0", "name": "discount_per", "dummy": "0.0", "desc": "discount value", "ds": ""}, {"no": "29.0", "name": "delivery_charge", "dummy": "0.0", "desc": "delivery_charge", "ds": ""}, {"no": "30.0", "name": "delivery_charge_details", "dummy": "[]", "desc": "delivery_charge_details", "ds": ""}, {"no": "31.0", "name": "name", "dummy": "VK Sales Corporation(New Development)", "desc": "receiver kitchen/restaurant/supplier name", "ds": ""}, {"no": "32.0", "name": "rest_details", "dummy": "", "desc": "details of restaurants", "ds": ""}, {"no": "33.0", "name": "tax_details", "dummy": "[]", "desc": "tax_details", "ds": ""}, {"no": "34.0", "name": "created_by", "dummy": "58034.0", "desc": "user id of purchase created person", "ds": ""}, {"no": "35.0", "name": "createdby_user_type", "dummy": "W", "desc": "N/A", "ds": ""}, {"no": "36.0", "name": "createdby_username", "dummy": "Vishwa Foods - Borivali (W)", "desc": "user name of purchase created person", "ds": ""}, {"no": "37.0", "name": "cancel_reason", "dummy": "", "desc": "Cancel reason", "ds": ""}, {"no": "38.0", "name": "created", "dummy": "43596.99388888889", "desc": "timestamp of the entry created.", "ds": ""}, {"no": "39.0", "name": "modified", "dummy": "43596.99388888889", "desc": "timestamp of last modified.", "ds": ""}, {"no": "40.0", "name": "unique_instance_id", "dummy": "28.0", "desc": "Unique instance id", "ds": ""}, {"no": "41.0", "name": "res_name", "dummy": "Vishwa Foods - Borivali (W)", "desc": "N/A", "ds": ""}, {"no": "42.0", "name": "brand_name", "dummy": "", "desc": "N/A", "ds": ""}, {"no": "43.0", "name": "state_name", "dummy": "", "desc": "N/A", "ds": ""}, {"no": "44.0", "name": "city_name", "dummy": "", "desc": "N/A", "ds": ""}, {"no": "45.0", "name": "invoice_file", "dummy": "", "desc": "invoice file name", "ds": ""}, {"no": "46.0", "name": "tp_no", "dummy": "", "desc": "N/A", "ds": ""}], "purchase_item_details": [{"no": "1.0", "name": "id", "dummy": "5.01743695E8", "desc": "Primary key", "ds": ""}, {"no": "2.0", "name": "restaurant_id", "dummy": "38823.0", "desc": "Primary key of restaurant table", "ds": ""}, {"no": "3.0", "name": "purchase_id", "dummy": "6.9850527E7", "desc": "Primary key of purchase table", "ds": ""}, {"no": "4.0", "name": "item_id", "dummy": "1.6446568E7", "desc": "Primary key of raw_material table", "ds": ""}, {"no": "5.0", "name": "unit", "dummy": "819549.0", "desc": "Primary key of restaurant_units table", "ds": ""}, {"no": "6.0", "name": "qty", "dummy": "1.0", "desc": "qty", "ds": ""}, {"no": "7.0", "name": "price", "dummy": "1620.0", "desc": "price", "ds": ""}, {"no": "8.0", "name": "weighted_price", "dummy": "1911.6", "desc": "Average Purchase price", "ds": ""}, {"no": "9.0", "name": "amount", "dummy": "1620.0", "desc": "amount", "ds": ""}, {"no": "10.0", "name": "discount", "dummy": "0.0", "desc": "discount", "ds": ""}, {"no": "11.0", "name": "tax1", "dummy": "9.0", "desc": "cgst", "ds": ""}, {"no": "12.0", "name": "tax2", "dummy": "9.0", "desc": "sgst", "ds": ""}, {"no": "13.0", "name": "tax3", "dummy": "0.0", "desc": "Igst", "ds": ""}, {"no": "14.0", "name": "tax4", "dummy": "0.0", "desc": "Vat/cess", "ds": ""}, {"no": "15.0", "name": "tax1_amount", "dummy": "145.8", "desc": "cgst amount", "ds": ""}, {"no": "16.0", "name": "tax2_amount", "dummy": "145.8", "desc": "sgst amount", "ds": ""}, {"no": "17.0", "name": "tax3_amount", "dummy": "0.0", "desc": "Igst amount", "ds": ""}, {"no": "18.0", "name": "tax4_amount", "dummy": "0.0", "desc": "Vat/cess amount", "ds": ""}, {"no": "19.0", "name": "hsn_code", "dummy": "", "desc": "hsn_code", "ds": ""}, {"no": "20.0", "name": "description", "dummy": "", "desc": "N/A", "ds": ""}, {"no": "21.0", "name": "actual_qty", "dummy": "1.0", "desc": "N/A", "ds": ""}, {"no": "22.0", "name": "actual_unit_id", "dummy": "2736027.0", "desc": "N/A", "ds": ""}, {"no": "23.0", "name": "actual_unit_name", "dummy": "CAS", "desc": "N/A", "ds": ""}, {"no": "24.0", "name": "status", "dummy": "1.0", "desc": "1 = active, 0= inactive", "ds": ""}, {"no": "25.0", "name": "expiry_date", "dummy": "", "desc": "expiry_date", "ds": ""}, {"no": "26.0", "name": "created", "dummy": "43596.99388888889", "desc": "timestamp of the entry created.", "ds": ""}, {"no": "27.0", "name": "modified", "dummy": "43596.99388888889", "desc": "timestamp of last modified.", "ds": ""}, {"no": "28.0", "name": "wastage_expiry_status", "dummy": "0.0", "desc": "N/A", "ds": ""}, {"no": "29.0", "name": "sale_id", "dummy": "0.0", "desc": "N/A", "ds": ""}, {"no": "30.0", "name": "unique_instance_id", "dummy": "28.0", "desc": "unique_instance_id", "ds": ""}, {"no": "31.0", "name": "category", "dummy": "Dry Food", "desc": "raw_material category", "ds": ""}, {"no": "32.0", "name": "item_extra_info", "dummy": "", "desc": "item_extra_info", "ds": ""}], "sales": [{"no": "1.0", "name": "id", "dummy": "6.3545401E7", "desc": "Primary Key", "ds": ""}, {"no": "2.0", "name": "restaurant_id", "dummy": "15344.0", "desc": "Primary key of restaurant id", "ds": ""}, {"no": "3.0", "name": "restaurant_type", "dummy": "C", "desc": "R'=>'Restaurant','C'=>'Central Kitchen','S'=>'Supplier'", "ds": ""}, {"no": "4.0", "name": "type", "dummy": "SL", "desc": "SL'=>'Sales','PR'=>'Purchase Return','WA'=>'Wastage','IT'=>'Internal Transfer'", "ds": ""}, {"no": "5.0", "name": "sender_id", "dummy": "85093.0", "desc": "sender_id", "ds": ""}, {"no": "6.0", "name": "sender_type", "dummy": "R", "desc": "R'=>'Restaurant','C'=>'Central Kitchen','S'=>'Supplier','ST'=>'Store'", "ds": ""}, {"no": "7.0", "name": "ship_bill_outlet_id", "dummy": "0.0", "desc": "N/A", "ds": ""}, {"no": "8.0", "name": "sap_group_master_id", "dummy": "0.0", "desc": "N/A", "ds": ""}, {"no": "9.0", "name": "po_id", "dummy": "0.0", "desc": "primary key of po_request table", "ds": ""}, {"no": "10.0", "name": "invoice_date", "dummy": "45444.0", "desc": "Date of invoice", "ds": ""}, {"no": "11.0", "name": "invoice_number", "dummy": "", "desc": "Invoice number", "ds": ""}, {"no": "12.0", "name": "mrn_no", "dummy": "0.0", "desc": "MRN number", "ds": ""}, {"no": "13.0", "name": "change_details", "dummy": "", "desc": "change detail logs", "ds": ""}, {"no": "14.0", "name": "item_details", "dummy": "", "desc": "Item details json", "ds": ""}, {"no": "15.0", "name": "total", "dummy": "0.0", "desc": "total amount", "ds": ""}, {"no": "16.0", "name": "roundoff", "dummy": "0.0", "desc": "roundoff", "ds": ""}, {"no": "17.0", "name": "record_status", "dummy": "1.0", "desc": "0 = Cancelled, 1 = Saved, 2 = Sent", "ds": ""}, {"no": "18.0", "name": "status", "dummy": "1.0", "desc": "\t0 = Inactive, 1 = Active", "ds": ""}, {"no": "19.0", "name": "update_stock", "dummy": "1.0", "desc": "1'=>'Yes','0'=>'No'", "ds": ""}, {"no": "20.0", "name": "paid_amount", "dummy": "0.0", "desc": "paid amount", "ds": ""}, {"no": "21.0", "name": "payment_date", "dummy": "", "desc": "payment date", "ds": ""}, {"no": "22.0", "name": "payment_mode", "dummy": "1.0", "desc": "1 = Cash, 2 = Card, 3 = Cheque, 4 = Other", "ds": ""}, {"no": "23.0", "name": "gst_no", "dummy": "", "desc": "GST no", "ds": ""}, {"no": "24.0", "name": "total_tax", "dummy": "0.0", "desc": "total tax", "ds": ""}, {"no": "25.0", "name": "total_discount", "dummy": "0.0", "desc": "total discount", "ds": ""}, {"no": "26.0", "name": "discount_type", "dummy": "0.0", "desc": "0=>'fixed',1 => 'Percentage'", "ds": ""}, {"no": "27.0", "name": "discount_per", "dummy": "0.0", "desc": "Percentage/value", "ds": ""}, {"no": "28.0", "name": "delivery_charge", "dummy": "0.0", "desc": "delivery_charge", "ds": ""}, {"no": "29.0", "name": "delivery_charge_details", "dummy": "", "desc": "delivery_charge_details", "ds": ""}, {"no": "30.0", "name": "payment_flag", "dummy": "0.0", "desc": "\t0 = Unpaid, 1 = Paid", "ds": ""}, {"no": "31.0", "name": "invoice_rcm_flag", "dummy": "0.0", "desc": "0-No,1-Yes N/A", "ds": ""}, {"no": "32.0", "name": "invoice_terms_and_conditions", "dummy": "", "desc": "invoice_terms_and_conditions", "ds": ""}, {"no": "33.0", "name": "account_details", "dummy": "", "desc": "account_details", "ds": ""}, {"no": "34.0", "name": "address", "dummy": "", "desc": "address of restaurant/kitchen", "ds": ""}, {"no": "35.0", "name": "name", "dummy": "", "desc": "user name", "ds": ""}, {"no": "36.0", "name": "rest_details", "dummy": "", "desc": "restaurant/kitchen details", "ds": ""}, {"no": "37.0", "name": "tax_details", "dummy": "", "desc": "tax_details", "ds": ""}, {"no": "38.0", "name": "einvoice_details", "dummy": "", "desc": "N/A", "ds": ""}, {"no": "39.0", "name": "ewaybill_details", "dummy": "", "desc": "N/A", "ds": ""}, {"no": "40.0", "name": "created_by", "dummy": "110097.0", "desc": "user id of created", "ds": ""}, {"no": "41.0", "name": "createdby_user_type", "dummy": "W", "desc": "createdby_user_type", "ds": ""}, {"no": "42.0", "name": "createdby_username", "dummy": "Dispatch RMJ", "desc": "createdby_username", "ds": ""}, {"no": "43.0", "name": "cancel_reason", "dummy": "", "desc": "cancel_reason", "ds": ""}, {"no": "44.0", "name": "is_editable", "dummy": "1.0", "desc": "0 = non editable, 1 = editable", "ds": ""}, {"no": "45.0", "name": "created", "dummy": "45413.008472222224", "desc": "timestamp of the entry created.", "ds": ""}, {"no": "46.0", "name": "modified", "dummy": "45413.008472222224", "desc": "timestamp of last modified.", "ds": ""}, {"no": "47.0", "name": "unique_instance_id", "dummy": "62.0", "desc": "unique_instance_id", "ds": ""}, {"no": "48.0", "name": "rm_category", "dummy": "", "desc": "raw material category", "ds": ""}], "sale_item_details": [{"no": "1.0", "name": "id", "dummy": "2.69984939E8", "desc": "Primary Key", "ds": ""}, {"no": "2.0", "name": "restaurant_id", "dummy": "62482.0", "desc": "Primary key of Restaurant table", "ds": ""}, {"no": "3.0", "name": "sale_id", "dummy": "6.3545401E7", "desc": "Primary key of sales table", "ds": ""}, {"no": "4.0", "name": "item_id", "dummy": "8054745.0", "desc": "Primary key of raw material table", "ds": ""}, {"no": "5.0", "name": "unit", "dummy": "1249831.0", "desc": "Primary key of raw_material_units table", "ds": ""}, {"no": "6.0", "name": "qty", "dummy": "19.27272987", "desc": "Quantity", "ds": ""}, {"no": "7.0", "name": "price", "dummy": "0.0", "desc": "price", "ds": ""}, {"no": "8.0", "name": "weighted_price", "dummy": "0.0", "desc": "Avg price", "ds": ""}, {"no": "9.0", "name": "amount", "dummy": "0.0", "desc": "price*quantity", "ds": ""}, {"no": "10.0", "name": "discount", "dummy": "0.0", "desc": "discount", "ds": ""}, {"no": "11.0", "name": "tax1", "dummy": "0.0", "desc": "cgst", "ds": ""}, {"no": "12.0", "name": "tax2", "dummy": "0.0", "desc": "sgst", "ds": ""}, {"no": "13.0", "name": "tax3", "dummy": "0.0", "desc": "igst", "ds": ""}, {"no": "14.0", "name": "tax4", "dummy": "0.0", "desc": "cess", "ds": ""}, {"no": "15.0", "name": "tax1_amount", "dummy": "0.0", "desc": "cgst amount", "ds": ""}, {"no": "16.0", "name": "tax2_amount", "dummy": "0.0", "desc": "sgst amount", "ds": ""}, {"no": "17.0", "name": "tax3_amount", "dummy": "0.0", "desc": "Igst amount", "ds": ""}, {"no": "18.0", "name": "tax4_amount", "dummy": "0.0", "desc": "cess amount", "ds": ""}, {"no": "19.0", "name": "hsn_code", "dummy": "", "desc": "hsn code", "ds": ""}, {"no": "20.0", "name": "description", "dummy": "Raw Material Convert", "desc": "description", "ds": ""}, {"no": "21.0", "name": "actual_qty", "dummy": "0.0", "desc": "N/A", "ds": ""}, {"no": "22.0", "name": "actual_unit_id", "dummy": "0.0", "desc": "N/A", "ds": ""}, {"no": "23.0", "name": "actual_unit_name", "dummy": "", "desc": "N/A", "ds": ""}, {"no": "24.0", "name": "status", "dummy": "1.0", "desc": "0 = Inactive, 1 = Active", "ds": ""}, {"no": "25.0", "name": "expiry_date", "dummy": "", "desc": "expiry date", "ds": ""}, {"no": "26.0", "name": "created", "dummy": "45414.47586", "desc": "timestamp of the entry created.", "ds": ""}, {"no": "27.0", "name": "modified", "dummy": "45414.47586", "desc": "timestamp of last modified.", "ds": ""}, {"no": "28.0", "name": "unique_instance_id", "dummy": "62.0", "desc": "unique_instance_id", "ds": ""}, {"no": "29.0", "name": "category", "dummy": "Poultry", "desc": "raw material category", "ds": ""}, {"no": "30.0", "name": "item_extra_info", "dummy": "", "desc": "extra info json", "ds": ""}], "recipe_masters": [{"no": "1.0", "name": "id", "dummy": "1.55253E7", "desc": "Primary key", "ds": ""}, {"no": "2.0", "name": "restaurant_id", "dummy": "38823.0", "desc": "Primary key of restaurants table", "ds": ""}, {"no": "3.0", "name": "ho", "dummy": "1.3982491E7", "desc": "HO id", "ds": ""}, {"no": "4.0", "name": "recipe_for", "dummy": "1.0", "desc": "1=Item,3=Addon", "ds": ""}, {"no": "5.0", "name": "parent_item_id", "dummy": "1.240608883E9", "desc": "Primary key of items table", "ds": ""}, {"no": "6.0", "name": "Addon_id", "dummy": "0.0", "desc": "primary key of addon_items table", "ds": ""}, {"no": "7.0", "name": "sap_group_master_id", "dummy": "0.0", "desc": "N/A", "ds": ""}, {"no": "8.0", "name": "item_id", "dummy": "1.240608883E9", "desc": "Primary key of items table", "ds": ""}, {"no": "9.0", "name": "recipe_item_id", "dummy": "5117645.0", "desc": "Primary key of raw_material table", "ds": ""}, {"no": "10.0", "name": "recipe_item_unit", "dummy": "798377.0", "desc": "Primary key of restaurant_units table", "ds": ""}, {"no": "11.0", "name": "recipe_item_qty", "dummy": "1.0", "desc": "raw_material quantity", "ds": ""}, {"no": "12.0", "name": "recipe_item_area", "dummy": "0.0", "desc": "primary key of `restaurant_areas` table", "ds": ""}, {"no": "13.0", "name": "added_from", "dummy": "0.0", "desc": "\t0=Form,1=File", "ds": ""}, {"no": "14.0", "name": "created", "dummy": "14-06-2022  18:14:37", "desc": "timestamp of the entry created.", "ds": ""}, {"no": "15.0", "name": "modified", "dummy": "14-06-2022  18:14:37", "desc": "timestamp of last modified.", "ds": ""}, {"no": "16.0", "name": "created_by", "dummy": "34895.0", "desc": "user id of created", "ds": ""}, {"no": "17.0", "name": "createdby_username", "dummy": "Vishal Goria", "desc": "name of created person", "ds": ""}, {"no": "18.0", "name": "unique_instance_id", "dummy": "28.0", "desc": "unique_instance_id", "ds": ""}, {"no": "19.0", "name": "display_unit", "dummy": "0.0", "desc": "display_unit", "ds": ""}, {"no": "20.0", "name": "display_qty", "dummy": "0.0", "desc": "display_qty", "ds": ""}, {"no": "21.0", "name": "allow_alternate_recipe", "dummy": "", "desc": "0=>'No',1=>'Yes'", "ds": ""}], "closing_stocks": [{"no": "1.0", "name": "id", "dummy": "3.646414822E9", "desc": "Primary ID", "ds": ""}, {"no": "2.0", "name": "restaurant_id", "dummy": "38823.0", "desc": "Primary ID of restaurant table", "ds": ""}, {"no": "3.0", "name": "item_id", "dummy": "1.6446508E7", "desc": "Primary ID of raw_material table", "ds": ""}, {"no": "4.0", "name": "unit", "dummy": "840083.0", "desc": "Primary ID of restaurant_units table", "ds": ""}, {"no": "5.0", "name": "sap_group_master_id", "dummy": "0.0", "desc": "N/A", "ds": ""}, {"no": "6.0", "name": "qty", "dummy": "626.0", "desc": "Quantity", "ds": ""}, {"no": "7.0", "name": "avg_purchase_price", "dummy": "0.802311", "desc": "avg_purchase_price", "ds": ""}, {"no": "8.0", "name": "last_item_purchase_price", "dummy": "0.80239999", "desc": "last_rawmaterial_purchase_price", "ds": ""}, {"no": "9.0", "name": "last_purchase_price", "dummy": "802.400024", "desc": "last_purchase_price of whole order", "ds": ""}, {"no": "10.0", "name": "created", "dummy": "45297.99998842592", "desc": "timestamp of the entry created.", "ds": ""}, {"no": "11.0", "name": "modified", "dummy": "45297.99998842592", "desc": "timestamp of last modified.", "ds": ""}, {"no": "12.0", "name": "item_name", "dummy": "Periperi Nachos Burger Jk Wrapper (500 Pcs)", "desc": "raw material name", "ds": ""}, {"no": "13.0", "name": "unit_name", "dummy": "Pcs", "desc": "unit_name", "ds": ""}, {"no": "14.0", "name": "department_name", "dummy": "", "desc": "department name", "ds": ""}, {"no": "15.0", "name": "stock_qty", "dummy": "626.0", "desc": "N/A", "ds": ""}, {"no": "16.0", "name": "stock_avg_purchase_price", "dummy": "0.802311", "desc": "N/A", "ds": ""}, {"no": "17.0", "name": "days0", "dummy": "0.80239999", "desc": "Avg purchase price of 0 days", "ds": ""}, {"no": "18.0", "name": "days15", "dummy": "0.80239999", "desc": "Avg purchase price of 15 days", "ds": ""}, {"no": "19.0", "name": "days30", "dummy": "0.80239999", "desc": "Avg purchase price of 30 days", "ds": ""}, {"no": "20.0", "name": "days45", "dummy": "0.80239999", "desc": "Avg purchase price of 45 days", "ds": ""}, {"no": "21.0", "name": "days60", "dummy": "0.80239999", "desc": "Avg purchase price of 60 days", "ds": ""}, {"no": "22.0", "name": "days75", "dummy": "0.80239999", "desc": "Avg purchase price of 75 days", "ds": ""}, {"no": "23.0", "name": "days90", "dummy": "0.80239999", "desc": "Avg purchase price of 90 days", "ds": ""}, {"no": "24.0", "name": "unique_instance_id", "dummy": "28.0", "desc": "unique_instance_id", "ds": ""}], "consume_item_details": [{"no": "1.0", "name": "id", "dummy": "4.029122441E9", "desc": "Primary key", "ds": ""}, {"no": "2.0", "name": "restaurant_id", "dummy": "38823.0", "desc": "Primary key of restaurants table", "ds": ""}, {"no": "3.0", "name": "type", "dummy": "1.0", "desc": "1=Item,2=Addon", "ds": ""}, {"no": "4.0", "name": "order_id", "dummy": "4.036143561E9", "desc": "primary id of orders table", "ds": ""}, {"no": "5.0", "name": "invoice_id", "dummy": "13998.0", "desc": "order table invoice id", "ds": ""}, {"no": "6.0", "name": "sap_group_master_id", "dummy": "0.0", "desc": "N/A", "ds": ""}, {"no": "7.0", "name": "order_type", "dummy": "2.0", "desc": "order_type", "ds": ""}, {"no": "8.0", "name": "order_area", "dummy": "76833.0", "desc": "primary key of restaurant_area table", "ds": ""}, {"no": "9.0", "name": "table_no", "dummy": "", "desc": "table_no", "ds": ""}, {"no": "10.0", "name": "payment_type", "dummy": "1.0", "desc": "payment_type", "ds": ""}, {"no": "11.0", "name": "order_from", "dummy": "POS", "desc": "N/A", "ds": ""}, {"no": "12.0", "name": "order_created_date", "dummy": "45453.0", "desc": "Created_date of orders", "ds": ""}, {"no": "13.0", "name": "order_status", "dummy": "1.0", "desc": "order_status", "ds": ""}, {"no": "14.0", "name": "item_id", "dummy": "1.265135655E9", "desc": "Primary key of items table", "ds": ""}, {"no": "15.0", "name": "item_name", "dummy": "Mumbai Burger", "desc": "item_name", "ds": ""}, {"no": "16.0", "name": "item_qty", "dummy": "3.0", "desc": "item_qty", "ds": ""}, {"no": "17.0", "name": "Addon_id", "dummy": "0.0", "desc": "primary key of addon_items table", "ds": ""}, {"no": "18.0", "name": "addon_name", "dummy": "", "desc": "addon_name", "ds": ""}, {"no": "19.0", "name": "recipe_item_id", "dummy": "1.6446521E7", "desc": "Primary key of raw_material", "ds": ""}, {"no": "20.0", "name": "recipe_item_name", "dummy": "Onion-(fluctuate)", "desc": "raw_material name", "ds": ""}, {"no": "21.0", "name": "qty", "dummy": "36.0", "desc": "raw_material quantity", "ds": ""}, {"no": "22.0", "name": "unit", "dummy": "3177033.0", "desc": "primary key of restaurant_unit table ", "ds": ""}, {"no": "23.0", "name": "unit_name", "dummy": "GMS", "desc": "restaurant_unit name", "ds": ""}, {"no": "24.0", "name": "price", "dummy": "0.034848999", "desc": "average Purchase Price of raw material", "ds": ""}, {"no": "25.0", "name": "cost", "dummy": "1.25", "desc": "Average Purchase Price * qty        ", "ds": ""}, {"no": "26.0", "name": "order_info", "dummy": "{\"is_combo\": 0, \"combo_qty\": 0, \"combo_name\": \"Mumbai Burger\", \"days0_cost\": 1.3, \"days0_price\": 0.036, \"days15_cost\": 1.18, \"days30_cost\": 1.12, \"days45_cost\": 1.05, \"days60_cost\": 1.02, \"days75_cost\": 1.0, \"days90_cost\": 0.99, \"days15_price\": 0.032857, \"days30_price\": 0.031091, \"days45_price\": 0.029255, \"days60_price\": 0.028313, \"days75_price\": 0.027658, \"days90_price\": 0.027531, \"combo_item_id\": 0, \"selling_price\": 37.142857, \"selling_amount\": 111.428571, \"order_created_at\": \"2024-06-10 12:33:15\", \"addon_selling_price\": 0, \"addon_selling_amount\": 0, \"average_without_tax_info\": \"{\\\"avg_0days\\\":0.036,\\\"avg_15days\\\":0.032857,\\\"avg_30days\\\":0.031091,\\\"avg_45days\\\":0.029255,\\\"avg_60days\\\":0.028313,\\\"avg_75days\\\":0.027658,\\\"avg_90days\\\":0.027531,\\\"last_purchase_price_without_tax\\\":720,\\\"last_item_purchase_price_without_tax\\\":0.036}\", \"average_purchase_price_without_tax\": 0.034849}", "desc": "order info", "ds": ""}, {"no": "27.0", "name": "created", "dummy": "45571.523622685185", "desc": "timestamp of the entry created.", "ds": ""}, {"no": "28.0", "name": "modified", "dummy": "45571.523622685185", "desc": "timestamp of last modified.", "ds": ""}, {"no": "29.0", "name": "is_update", "dummy": "1.0", "desc": "N/A", "ds": ""}, {"no": "30.0", "name": "department_name", "dummy": "", "desc": "department_name", "ds": ""}, {"no": "31.0", "name": "unique_instance_id", "dummy": "28.0", "desc": "unique_instance_id", "ds": ""}], "stock_masters": [{"no": "1.0", "name": "id", "dummy": "1.8650857E7", "desc": "Primary Key", "ds": ""}, {"no": "2.0", "name": "restaurant_id", "dummy": "38823.0", "desc": "Primary Key of restaurants table", "ds": ""}, {"no": "3.0", "name": "item_id", "dummy": "1.6446519E7", "desc": "Primary ID of raw_material table", "ds": ""}, {"no": "4.0", "name": "item_name", "dummy": "12 Ltrs Diversey Can (water Storage)", "desc": "Raw material name", "ds": ""}, {"no": "5.0", "name": "unit", "dummy": "798383.0", "desc": "Primary ID of restaurant_units table", "ds": ""}, {"no": "6.0", "name": "unit_name", "dummy": "CAN", "desc": "unit_name", "ds": ""}, {"no": "7.0", "name": "sap_group_master_id", "dummy": "0.0", "desc": "N/A", "ds": ""}, {"no": "8.0", "name": "department_name", "dummy": "", "desc": "department name", "ds": ""}, {"no": "9.0", "name": "qty", "dummy": "0.0", "desc": "Quantity", "ds": ""}, {"no": "10.0", "name": "previous_qty", "dummy": "0.0", "desc": "-", "ds": ""}, {"no": "11.0", "name": "avg_purchase_price", "dummy": "0.0", "desc": "avg_purchase_price", "ds": ""}, {"no": "12.0", "name": "last_item_purchase_price", "dummy": "0.0", "desc": "last_rawmaterial_purchase_price", "ds": ""}, {"no": "13.0", "name": "last_purchase_price", "dummy": "0.0", "desc": "last_purchase_price of whole order", "ds": ""}, {"no": "14.0", "name": "stock_update_date", "dummy": "24-09-2025 12:09", "desc": "last stock update date", "ds": ""}, {"no": "15.0", "name": "created", "dummy": "24-09-2025 12:09", "desc": "timestamp of the entry created.", "ds": ""}, {"no": "16.0", "name": "modified", "dummy": "45757.777083333334", "desc": "timestamp of last modified.", "ds": ""}, {"no": "17.0", "name": "days0", "dummy": "", "desc": "Avg purchase price of 0 days", "ds": ""}, {"no": "18.0", "name": "days15", "dummy": "", "desc": "Avg purchase price of 15 days", "ds": ""}, {"no": "19.0", "name": "days30", "dummy": "", "desc": "Avg purchase price of 30 days", "ds": ""}, {"no": "20.0", "name": "days45", "dummy": "", "desc": "Avg purchase price of 45 days", "ds": ""}, {"no": "21.0", "name": "days60", "dummy": "", "desc": "Avg purchase price of 60 days", "ds": ""}, {"no": "22.0", "name": "days75", "dummy": "", "desc": "Avg purchase price of 75 days", "ds": ""}, {"no": "23.0", "name": "days90", "dummy": "", "desc": "Avg purchase price of 90 days", "ds": ""}, {"no": "24.0", "name": "unique_instance_id", "dummy": "28.0", "desc": "unique_instance_id", "ds": ""}, {"no": "25.0", "name": "extra_info", "dummy": "", "desc": "extra_info", "ds": ""}, {"no": "26.0", "name": "avg_purchase_price_without_tax", "dummy": "0.0", "desc": "avg_purchase_price_without_tax", "ds": ""}]}</script>
+<script>
+const SCHEMA = JSON.parse(document.getElementById('schema').textContent);
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const EX = {
+  restaurant: { id: 107453, name: 'AJ & Co (Mumbai Central)' },
+  ck: { id: 62482, name: 'Central Kitchen — Andheri' },
+  supplier: { id: 46499, name: 'Radhakrishna Foodland Pvt Ltd - Mumbai' },
+  po: { id: 46858271, request_number: 'PO0046858271', request_date: '2023-07-28', record_status: '2 Sent', total: 32210.8, total_tax: 3892.74 },
+  po_items: [
+    { item_id: 4169976, itemname: 'French Fries', lbl_unit: 'CAS', qty: 3, price: 1601.75, amount: 4805.25 },
+    { item_id: 4169980, itemname: 'Burger Bun 4inch', lbl_unit: 'PCS', qty: 200, price: 4.5, amount: 900 },
+    { item_id: 16446521, itemname: 'Onion-(fluctuate)', lbl_unit: 'KG', qty: 10, price: 28, amount: 280 }
+  ],
+  sales: { id: 63545401, type: 'SL', invoice_number: 'SL0063545401', restaurant_id: 62482, sender_id: 107453, po_id: 46858271 },
+  sale_items: [
+    { item_id: 4169976, itemname: 'French Fries', qty: 3, unit: 'CAS' },
+    { item_id: 4169980, itemname: 'Burger Bun 4inch', qty: 200, unit: 'PCS' }
+  ],
+  purchase_po: { id: 69850527, type: 'PU', po_id: 46858271, po_type: 'PO', invoice_number: 'INV-RK-88421' },
+  purchase_so: { id: 69850999, type: 'PU', po_id: 63545401, po_type: 'SO', invoice_number: 'GRN-CK-1201' },
+  stock: { item: 'French Fries', before: 12, after_in: 15, unit: 'CAS' },
+  recipe: { menu: 'Mumbai Burger', rm: 'Onion-(fluctuate)', per: 12, sold: 3, consume: 36, unit: 'GMS' }
+};
+
+/* ========== NAV: one page sections + flow chips ========== */
+const SECTIONS = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'flows', label: 'Flow diagrams' },
+  { id: 'summary', label: 'Stock Summary A–I' },
+  { id: 'schema', label: 'Schema tables' },
+  { id: 'cleantables', label: 'Clean table map' },
+  { id: 'codes', label: 'Status & codes' }
+];
+
+const FLOWS = [
+  {
+    id: 'supplier', n: '1', label: 'Supplier PO → Purchase',
+    title: 'Third-party purchase: PO raised → Purchase',
+    subtitle: 'Restaurant raises a PO to a supplier. Goods arrive as purchase_master with po_type = PO and po_id = po_request.id. Inventory sales is not used. Stock rises only when the purchase posts.',
+    legend: 'Curves show joins. Sage = stock in (why: goods enter). Soft red = stock out (why: goods leave). Sand dashed = doc link (why: no stock yet). Blue = POS consume. Grey = summary/snapshot.',
+    defaultPath: ['rest', 'po', 'poi', 'sup', 'pur', 'puri', 'stock', 'close'],
+    defaultEdges: ['e1', 'e3', 'e4', 'e5', 'e6', 'e7', 'e8']
+  },
+  {
+    id: 'ck', n: '2', label: 'CK: PO → Sales → Purchase',
+    title: 'Central kitchen indent: PO → Sales (dispatch) → Purchase',
+    subtitle: 'Restaurant raises PO to CK (receiver_type C). CK fulfils with inventory sales (SL). Restaurant books purchase with po_type = SO and po_id = sales.id (the dispatch id becomes po_id).',
+    legend: 'Corrected rule: on sales, restaurant_id is the SENDER (CK). sender_id is the receiving restaurant.',
+    defaultPath: ['rest', 'po', 'poi', 'ck', 'sl', 'sli', 'ckstock', 'pur', 'puri', 'rst'],
+    defaultEdges: ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9', 'c10']
+  },
+  {
+    id: 'purchase', n: '3', label: 'Purchase all types',
+    title: 'purchase_master.type — every inward path',
+    subtitle: 'PU purchase, SR sale-return in, MS manual excess, IT production output. IT is not outlet-to-outlet transfer.',
+    legend: 'Click a type node to highlight that branch into lines → stock → summary column.',
+    defaultPath: ['hdr', 'pu', 'lines', 'stock', 'b'],
+    defaultEdges: ['p1', 'p5', 'p10', 'p11']
+  },
+  {
+    id: 'sales', n: '4', label: 'Sales all types',
+    title: 'Inventory sales — outward types (not POS)',
+    subtitle: 'SL dispatch/sale/transfer, PR purchase return, WA wastage, MS shortage, IT production input. Only SL to another outlet is later received as purchase SO.',
+    legend: 'Click SL to see the receive-side purchase path highlighted.',
+    defaultPath: ['hdr', 'sl', 'lines', 'stock', 'recv', 'g'],
+    defaultEdges: ['s1', 's6', 's11', 's12', 's13']
+  },
+  {
+    id: 'closing', n: '5', label: 'Closing stock scenarios',
+    title: 'Live stock, EOD closing, physical count',
+    subtitle: 'closing_stocks is a system snapshot. Physical differences are posted as MS purchase (excess) or MS sales (shortage)—not typed into closing.',
+    legend: 'Full diagram on load. Click Opening / Physical count / a scenario card to lock that path. Sage = stock in · Rose = stock out · Grey = info.',
+    defaultPath: ['open', 'moves', 'live', 'close', 'phys', 'ex', 'sh', 'eq'],
+    defaultEdges: ['z1', 'z2', 'z3', 'z4', 'z5', 'z6', 'z7', 'z8', 'z9']
+  },
+  {
+    id: 'pos', n: '6', label: 'Recipe → POS consume',
+    title: 'Guest POS sale consumes raw material via recipe',
+    subtitle: 'recipe_masters defines ingredients. On bill settle, consume_item_details is written and stock_masters falls. This is not the inventory sales table.',
+    legend: 'Exclude consume rows with order_from = SL when totalling with outward documents.',
+    defaultPath: ['menu', 'rec', 'rm', 'pos', 'con', 'stock', 'd'],
+    defaultEdges: ['r1', 'r2', 'r3', 'r4', 'r5', 'r6']
+  }
+];
+
+const CLEAN_MAP = [
+  { raw: 'raw_materials', clean: 'dim_raw_materials', role: 'RM master (R raw / S semi-cooked). Units, min/max/par, WA/FIFO/LIFO.', effect: 'Defines what can be purchased, transferred, cooked, consumed.' },
+  { raw: 'restaurant_units', clean: 'dim_inventory_units', role: 'Purchase & consumption unit names.', effect: 'conversion_qty bridges purchase unit → consumption unit.' },
+  { raw: 'po_request', clean: 'fct_po_requests', role: 'PO / indent header. Moves no stock.', effect: 'Starts supplier buy or CK indent.' },
+  { raw: 'po_requests_item_detail_reports', clean: 'fct_po_request_items', role: 'Requested RM lines on a PO.', effect: 'Baseline for sent vs received variance.' },
+  { raw: 'purchase_master', clean: 'fct_purchases', role: 'Inward: PU / SR / MS / IT.', effect: 'Stock ↑ when active and update_stock=1.' },
+  { raw: 'purchase_item_details', clean: 'fct_purchase_items', role: 'Inward RM lines (+ batches in clean layer).', effect: 'Qty in; feeds avg purchase price.' },
+  { raw: 'sales', clean: 'fct_stock_outward', role: 'Inventory outward header (not POS). SL/PR/WA/MS/IT.', effect: 'Sender stock ↓. restaurant_id = sender.' },
+  { raw: 'sale_item_details', clean: 'fct_stock_outward_items', role: 'Outward RM lines.', effect: 'Decreases sender stock.' },
+  { raw: 'recipe_masters', clean: 'dim_recipes', role: 'Menu item / addon → raw material qty.', effect: 'Blueprint for POS consumption.' },
+  { raw: 'consume_item_details', clean: 'fct_pos_consumption', role: 'Recipe explosion per POS order line.', effect: 'Stock Summary D (Consumed).' },
+  { raw: 'stock_masters', clean: 'dim_stock_levels', role: 'Live RM × unit × dept balance.', effect: 'Current on-hand.' },
+  { raw: 'closing_stocks', clean: 'fct_closing_stocks', role: 'EOD system snapshot (not physical count).', effect: 'Next-day opening; variance via MS docs.' }
+];
+
+const EXTRA = [
+  { name: 'fct_purchase_payments / fct_po_request_payments / fct_stock_outward_payments', note: 'Money side of PO, purchase, dispatch.' },
+  { name: 'fct_purchase_batches / fct_consumption_batches', note: 'Expiry / FIFO-LIFO batch allocation.' },
+  { name: 'dim_production_conversions (+ inputs)', note: 'Production definitions; run writes IT in + IT out.' },
+  { name: 'dim_suppliers / dim_departments', note: 'Supplier party and kitchen areas.' },
+  { name: 'fct_inventory_movement_lines', note: 'Unified signed movements for Stock Summary B–I.' },
+  { name: 'fct_inventory_*_records mirrors', note: 'Raw-faithful audit copies (all statuses).' }
+];
+
+function N(id, x, y, w, h, title, sub, meta = {}) {
+  return { id, x, y, w, h, title, sub, ...meta };
+}
+function E(id, a, b, opts = {}) {
+  // kind: link (doc/no stock) | stockin | stockout | consume | info
+  const kind = opts.kind || (opts.dash ? 'link' : 'info');
+  return {
+    id, a, b,
+    kind,
+    dash: kind === 'link' || !!opts.dash,
+    label: opts.label || '',
+    join: opts.join || '',
+    example: opts.example || '',
+    why: opts.why || ''
+  };
+}
+
+/* Soft cubic curves — avoid rigid right-angle elbows */
+function edgePath(A, B) {
+  const ax = A.x + A.w / 2, ay = A.y + A.h / 2;
+  const bx = B.x + B.w / 2, by = B.y + B.h / 2;
+  const dx = bx - ax, dy = by - ay;
+  const dist = Math.hypot(dx, dy) || 1;
+  // pull control points along the dominant axis for a gentle S-curve
+  const pull = Math.min(120, dist * 0.45);
+  let c1x, c1y, c2x, c2y;
+  if (Math.abs(dx) >= Math.abs(dy)) {
+    c1x = ax + Math.sign(dx || 1) * pull;
+    c1y = ay;
+    c2x = bx - Math.sign(dx || 1) * pull;
+    c2y = by;
+  } else {
+    c1x = ax;
+    c1y = ay + Math.sign(dy || 1) * pull;
+    c2x = bx;
+    c2y = by - Math.sign(dy || 1) * pull;
+  }
+  // slight vertical/horizontal bias so parallel edges fan apart
+  const fan = ((A.id.charCodeAt(0) + B.id.charCodeAt(0)) % 7 - 3) * 4;
+  if (Math.abs(dx) >= Math.abs(dy)) { c1y += fan; c2y -= fan; }
+  else { c1x += fan; c2x -= fan; }
+  return `M ${ax} ${ay} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${bx} ${by}`;
+}
+
+function edgeLabelPoint(A, B) {
+  const ax = A.x + A.w / 2, ay = A.y + A.h / 2;
+  const bx = B.x + B.w / 2, by = B.y + B.h / 2;
+  return { x: (ax + bx) / 2, y: (ay + by) / 2 - 8 };
+}
+
+function graphSupplier() {
+  const W = 1180, H = 560;
+  const nodes = [
+    N('lane1', 40, 8, 0, 0, '', '', { lane: 'Masters' }),
+    N('rest', 40, 40, 160, 56, 'Restaurant', 'AJ & Co · 107453', { kind: 'party', step: 'Party' }),
+    N('rm', 240, 40, 170, 56, 'Raw materials', 'raw_materials', { kind: 'master', table: 'raw_materials', step: 'Master' }),
+    N('unit', 450, 40, 150, 56, 'Units', 'restaurant_units', { kind: 'master', table: 'restaurant_units', step: 'Master' }),
+    N('po', 40, 160, 200, 64, '1. Raise PO', 'po_request · PO0046858271', { kind: 'po', table: 'po_request', stock: false, step: 'PO' }),
+    N('poi', 280, 160, 210, 64, '2. PO item lines', 'po_requests_item_detail…', { kind: 'po_items', table: 'po_requests_item_detail_reports', stock: false, step: 'PO lines' }),
+    N('sup', 540, 160, 200, 64, '3. Supplier (S)', 'receiver_type = S', { kind: 'party', step: 'Supplier' }),
+    N('note', 780, 160, 280, 64, 'No inventory sales', 'Third-party path skips sales table', { kind: 'note_supplier', step: 'Note' }),
+    N('pur', 40, 320, 220, 68, '4. Purchase PU', 'po_type=PO · po_id=PO.id', { kind: 'purchase_po', table: 'purchase_master', stock: true, step: 'Purchase' }),
+    N('puri', 300, 320, 200, 68, '5. Purchase lines', 'purchase_item_details', { kind: 'purchase_items', table: 'purchase_item_details', stock: true, step: 'Lines' }),
+    N('stock', 540, 320, 190, 68, '6. Live stock ↑', 'stock_masters', { kind: 'stock_in', table: 'stock_masters', stock: true, step: 'Stock' }),
+    N('close', 780, 320, 180, 68, '7. EOD close', 'closing_stocks', { kind: 'closing', table: 'closing_stocks', step: 'Closing' })
+  ];
+  const edges = [
+    E('e1', 'rest', 'po', { kind:'link', label: 'creates', join: 'po_request.restaurant_id = restaurants.id', example: 'Restaurant 107453 raises PO0046858271', why:'Opening a PO is demand only.' }),
+    E('e2', 'rm', 'poi', { kind:'link', label: 'item_id', join: 'po_item.item_id = raw_materials.id', example: 'item_id 4169976 = French Fries', why:'Master lookup for which RM is requested.' }),
+    E('e3', 'po', 'poi', { kind:'link', label: 'po_id', join: 'po_requests_item_detail_reports.po_id = po_request.id', example: 'Every line po_id = 46858271', why:'Header↔line join; still no stock.' }),
+    E('e4', 'po', 'sup', { kind:'link', label: 'receiver_*', join: "po_request.receiver_id + receiver_type = 'S'", example: 'Supplier 46499', why:'Who should fulfil the PO.' }),
+    E('e5', 'po', 'pur', { kind:'link', label: 'po_id = PO.id', join: "purchase_master.po_id = po_request.id\npurchase_master.po_type = 'PO'\n(clean: source_po_request_key)", example: 'purchase 69850527.po_id = 46858271 · po_type PO', why:'Document link only — PO does not move stock until purchase posts.' }),
+    E('e6', 'pur', 'puri', { kind:'stockin', label: 'purchase id', join: 'purchase_item_details → purchase_master.id', example: 'Fries + Bun on GRN', why:'Purchase lines are the inward qty that will raise stock.' }),
+    E('e7', 'puri', 'stock', { kind:'stockin', label: 'item_id + qty', join: 'stock_masters.item_id = raw_materials.id', example: 'Fries 12 → 15 CAS', why:'Posted purchase increases live on-hand.' }),
+    E('e8', 'stock', 'close', { kind:'info', label: 'nightly', join: 'closing_stocks.item_id ↔ stock_masters.item_id', example: 'EOD freezes system qty', why:'Closing copies system stock; it is a snapshot, not a movement.' }),
+    E('e9', 'unit', 'poi', { kind:'link', label: 'unit', join: 'po_item.unit = restaurant_units.id', example: 'lbl_unit CAS', why:'Unit master for the requested qty.' })
+  ];
+  return { width: W, height: H, nodes, edges };
+}
+
+function graphCK() {
+  const nodes = [
+    N('rest', 40, 36, 160, 56, 'Restaurant', 'raises indent · 107453', { kind: 'party', step: 'Buyer' }),
+    N('po', 240, 36, 190, 60, '1. Raise PO', 'receiver_type = C', { kind: 'po', table: 'po_request', stock: false, step: 'PO' }),
+    N('poi', 470, 36, 190, 60, '2. PO items', 'requested RM qty', { kind: 'po_items', table: 'po_requests_item_detail_reports', stock: false, step: 'PO lines' }),
+    N('ck', 700, 36, 180, 60, '3. Central Kitchen', 'receiver_id 62482', { kind: 'party', step: 'CK' }),
+    N('sl', 40, 180, 210, 68, '4. CK Sales SL', 'sales · restaurant_id=CK', { kind: 'sales_sl', table: 'sales', stock: true, step: 'Dispatch' }),
+    N('sli', 290, 180, 190, 68, '5. Sale lines', 'sale_item_details', { kind: 'sale_items', table: 'sale_item_details', stock: true, step: 'Out lines' }),
+    N('ckstock', 520, 180, 180, 68, 'CK stock ↓', 'stock_masters @ CK', { kind: 'stock_out', table: 'stock_masters', stock: true, step: 'CK stock' }),
+    N('key', 740, 180, 320, 100, 'Join rule', 'SO: purchase.po_id = sales.id', { kind: 'note_ck', step: 'Rule' }),
+    N('pur', 40, 360, 240, 72, '6. Restaurant Purchase', 'po_type=SO · po_id=sales.id', { kind: 'purchase_so', table: 'purchase_master', stock: true, step: 'GRN' }),
+    N('puri', 320, 360, 190, 68, '7. Purchase lines', 'goods received', { kind: 'purchase_items', table: 'purchase_item_details', stock: true, step: 'In lines' }),
+    N('rst', 550, 360, 190, 68, 'Restaurant stock ↑', 'stock_masters', { kind: 'stock_in', table: 'stock_masters', stock: true, step: 'Rest stock' })
+  ];
+  const edges = [
+    E('c1', 'rest', 'po', { kind:'link', label: 'creates', join: 'po_request.restaurant_id = 107453', example: 'Indent to own CK', why:'Indent is demand only.' }),
+    E('c2', 'po', 'poi', { kind:'link', label: 'po_id', join: 'item.po_id = po_request.id', example: '3 CAS Fries + 200 PCS Bun' }),
+    E('c3', 'po', 'ck', { kind:'link', label: 'receiver C', join: "receiver_id = CK · receiver_type = 'C'", example: 'CK 62482' }),
+    E('c4', 'ck', 'sl', { kind:'link', label: 'CK fulfils', join: 'sales.restaurant_id = CK (SENDER)\nsales.sender_id = restaurant (RECEIVER)\nsales.po_id → po_request.id', example: 'sales.id = 63545401 type SL', why:'CK creates outward doc; stock moves on the SL lines, not on this link alone.' }),
+    E('c5', 'po', 'sl', { kind:'link', label: 'PO ↔ Sales', join: 'sales.po_id / po_request_key = po_request.id\n(clean: fct_stock_outward.po_request_key)', example: 'Dispatch answers PO 46858271', why:'Links indent to dispatch for variance.' }),
+    E('c6', 'sl', 'sli', { kind:'stockout', label: 'sale_id', join: 'sale_item_details.sale_id = sales.id', example: 'Lines leave CK', why:'Outward lines are what leave the sender store.' }),
+    E('c7', 'sli', 'ckstock', { kind:'stockout', label: 'item_id', join: 'stock_masters @ CK decreases', example: 'CK Fries 40 → 37', why:'Posted SL reduces CK live stock.' }),
+    E('c8', 'sl', 'pur', { kind:'link', label: 'po_id = sales.id', join: "purchase_master.po_id = sales.id\npurchase_master.po_type = 'SO'\n(clean: source_stock_outward_key)", example: 'purchase.po_id = 63545401 · po_type SO', why:'Document link: sale becomes purchase.po_id when po_type=SO.' }),
+    E('c9', 'pur', 'puri', { kind:'stockin', label: 'purchase id', join: 'purchase_item_details → purchase id', example: 'Restaurant receives lines', why:'Receiver inward lines.' }),
+    E('c10', 'puri', 'rst', { kind:'stockin', label: 'item_id', join: 'stock_masters @ restaurant ↑', example: 'Rest Fries 12 → 15', why:'GRN raises restaurant on-hand.' })
+  ];
+  return { width: 1100, height: 520, nodes, edges };
+}
+
+function graphPurchase() {
+  const nodes = [
+    N('hdr', 40, 40, 170, 56, 'purchase_master', 'Inward header', { kind: 'purchase_header', table: 'purchase_master', step: 'Header' }),
+    N('pu', 260, 40, 150, 60, 'type = PU', 'Supplier / outlet buy', { kind: 'type_pu', table: 'purchase_master', step: 'PU' }),
+    N('sr', 440, 40, 150, 60, 'type = SR', 'Sale return in', { kind: 'type_sr', table: 'purchase_master', step: 'SR' }),
+    N('ms', 620, 40, 150, 60, 'type = MS', 'Manual excess', { kind: 'type_ms_in', table: 'purchase_master', step: 'MS' }),
+    N('it', 800, 40, 150, 60, 'type = IT', 'Production output', { kind: 'type_it_in', table: 'purchase_master', step: 'IT' }),
+    N('potype', 40, 180, 190, 60, 'po_type + po_id', 'PO or SO linkage', { kind: 'potype', table: 'purchase_master', step: 'Link' }),
+    N('lines', 280, 180, 200, 60, 'purchase_item_details', 'RM qty / price / tax', { kind: 'purchase_items', table: 'purchase_item_details', step: 'Lines' }),
+    N('stock', 540, 180, 180, 60, 'stock_masters ↑', 'update_stock = 1', { kind: 'stock_in', table: 'stock_masters', step: 'Stock' }),
+    N('b', 280, 320, 140, 52, 'Summary B', 'PU + SR', { kind: 'sum_b', step: 'B' }),
+    N('c', 460, 320, 140, 52, 'Summary C', 'MS Excess', { kind: 'sum_c', step: 'C' }),
+    N('i', 640, 320, 140, 52, 'Summary I', 'IT Production in', { kind: 'sum_i', step: 'I' })
+  ];
+  const edges = [
+    E('p1', 'hdr', 'pu', { kind:'stockin', label: 'PU', why:'PU is goods-receipt inward.' }),
+    E('p2', 'hdr', 'sr', { kind:'stockin', label: 'SR', why:'Sale return brings qty back into stock.' }),
+    E('p3', 'hdr', 'ms', { kind:'stockin', label: 'MS', why:'Manual excess increases system stock to match count.' }),
+    E('p4', 'hdr', 'it', { kind:'stockin', label: 'IT', why:'Production output enters stock as IT purchase.' }),
+    E('p5', 'pu', 'lines', { kind:'stockin', label: 'id', join: 'lines → purchase_master.id', example: 'Inward lines', why:'Line qty is what posts to stock.' }),
+    E('p6', 'sr', 'lines', { kind:'stockin', label: 'id' }),
+    E('p7', 'ms', 'lines', { kind:'stockin', label: 'id' }),
+    E('p8', 'it', 'lines', { kind:'stockin', label: 'id' }),
+    E('p9', 'hdr', 'potype', { kind:'link', label: 'link', join: "po_type PO|SO + po_id", example: 'PO→po_request.id · SO→sales.id', why:'Explains which document po_id points at.' }),
+    E('p10', 'lines', 'stock', { kind:'stockin', label: 'item_id', join: 'stock_masters.item_id', example: 'On-hand ↑', why:'This is the stock-inward moment.' }),
+    E('p11', 'pu', 'b', { kind:'info', label: 'B', why:'Summary B groups Purchase + SR.' }),
+    E('p12', 'sr', 'b', { kind:'info', why:'SR also rolls into Summary B.' }),
+    E('p13', 'ms', 'c', { kind:'info', label: 'C', why:'Summary C = Excess.' }),
+    E('p14', 'it', 'i', { kind:'info', label: 'I', why:'Summary I = Production.' })
+  ];
+  // path maps per type for click highlight
+  return {
+    width: 1000, height: 440, nodes, edges,
+    branchPaths: {
+      type_pu: { nodes: ['hdr', 'pu', 'lines', 'stock', 'b', 'potype'], edges: ['p1', 'p5', 'p10', 'p11', 'p9'] },
+      type_sr: { nodes: ['hdr', 'sr', 'lines', 'stock', 'b', 'potype'], edges: ['p2', 'p6', 'p10', 'p12', 'p9'] },
+      type_ms_in: { nodes: ['hdr', 'ms', 'lines', 'stock', 'c', 'potype'], edges: ['p3', 'p7', 'p10', 'p13', 'p9'] },
+      type_it_in: { nodes: ['hdr', 'it', 'lines', 'stock', 'i', 'potype'], edges: ['p4', 'p8', 'p10', 'p14', 'p9'] }
+    }
+  };
+}
+
+function graphSales() {
+  const nodes = [
+    N('hdr', 40, 40, 170, 56, 'sales (inventory)', 'Outward · SENDER', { kind: 'sales_header', table: 'sales', step: 'Header' }),
+    N('sl', 250, 40, 140, 60, 'SL', 'Sale / Transfer / Dispatch', { kind: 'type_sl', table: 'sales', step: 'SL' }),
+    N('pr', 420, 40, 130, 60, 'PR', 'Purchase return', { kind: 'type_pr', table: 'sales', step: 'PR' }),
+    N('wa', 580, 40, 130, 60, 'WA', 'Wastage', { kind: 'type_wa', table: 'sales', step: 'WA' }),
+    N('ms', 740, 40, 130, 60, 'MS', 'Shortage', { kind: 'type_ms_out', table: 'sales', step: 'MS' }),
+    N('it', 900, 40, 130, 60, 'IT', 'Production input', { kind: 'type_it_out', table: 'sales', step: 'IT' }),
+    N('lines', 250, 180, 190, 60, 'sale_item_details', 'RM leaving sender', { kind: 'sale_items', table: 'sale_item_details', step: 'Lines' }),
+    N('stock', 490, 180, 170, 60, 'Sender stock ↓', 'stock_masters', { kind: 'stock_out', table: 'stock_masters', step: 'Stock' }),
+    N('recv', 710, 180, 220, 60, 'Receiver purchase?', 'Only SL → PU po_type SO', { kind: 'purchase_so', table: 'purchase_master', step: 'Receive' }),
+    N('g', 250, 320, 130, 50, 'Summary G', 'SL + PR', { kind: 'sum_g', step: 'G' }),
+    N('e', 410, 320, 130, 50, 'Summary E', 'Wastage', { kind: 'sum_e', step: 'E' }),
+    N('h', 570, 320, 130, 50, 'Summary H', 'Shortage', { kind: 'sum_h', step: 'H' }),
+    N('i', 730, 320, 130, 50, 'Summary I', 'IT out', { kind: 'sum_i', step: 'I' })
+  ];
+  const edges = [
+    E('s1', 'hdr', 'sl', { kind:'stockout', label: 'SL', why:'SL is outward from sender.' }), E('s2', 'hdr', 'pr', { kind:'stockout', label: 'PR', why:'Purchase return leaves your stock.' }), E('s3', 'hdr', 'wa', { kind:'stockout', label: 'WA', why:'Wastage writes stock off.' }),
+    E('s4', 'hdr', 'ms', { kind:'stockout', label: 'MS', why:'Shortage reduces system stock to match count.' }), E('s5', 'hdr', 'it', { kind:'stockout', label: 'IT', why:'Production inputs leave via IT sales.' }),
+    E('s6', 'sl', 'lines', { kind:'stockout', label: 'sale_id' }), E('s7', 'pr', 'lines', { kind:'stockout' }),
+    E('s8', 'wa', 'lines', { kind:'stockout' }), E('s9', 'ms', 'lines', { kind:'stockout' }), E('s10', 'it', 'lines', { kind:'stockout' }),
+    E('s11', 'lines', 'stock', { kind:'stockout', label: 'item_id', why:'Sender on-hand falls.' }),
+    E('s12', 'sl', 'recv', { kind:'link', label: 'po_id=sales.id', join: "purchase.po_id = sales.id · po_type='SO'", example: 'Restaurant GRN', why:'Receiver books purchase against this sale id.' }),
+    E('s13', 'sl', 'g', { kind:'info', why:'Summary G.' }), E('s14', 'pr', 'g', { kind:'info' }),
+    E('s15', 'wa', 'e', { kind:'info', why:'Summary E wastage.' }), E('s16', 'ms', 'h', { kind:'info', why:'Summary H shortage.' }), E('s17', 'it', 'i', { kind:'info', why:'Summary I production out.' })
+  ];
+  return {
+    width: 1080, height: 440, nodes, edges,
+    branchPaths: {
+      type_sl: { nodes: ['hdr', 'sl', 'lines', 'stock', 'recv', 'g'], edges: ['s1', 's6', 's11', 's12', 's13'] },
+      type_pr: { nodes: ['hdr', 'pr', 'lines', 'stock', 'g'], edges: ['s2', 's7', 's11', 's14'] },
+      type_wa: { nodes: ['hdr', 'wa', 'lines', 'stock', 'e'], edges: ['s3', 's8', 's11', 's15'] },
+      type_ms_out: { nodes: ['hdr', 'ms', 'lines', 'stock', 'h'], edges: ['s4', 's9', 's11', 's16'] },
+      type_it_out: { nodes: ['hdr', 'it', 'lines', 'stock', 'i'], edges: ['s5', 's10', 's11', 's17'] },
+      sales_header: { nodes: ['hdr', 'sl', 'lines', 'stock', 'recv', 'g'], edges: ['s1', 's6', 's11', 's12', 's13'] }
+    }
+  };
+}
+
+function graphClosing() {
+  const nodes = [
+    N('open', 40, 40, 160, 58, 'A Opening', 'Yesterday closing', { kind: 'open', table: 'closing_stocks', step: 'Open' }),
+    N('moves', 240, 40, 180, 58, 'Day movements', 'PU / SL / POS / IT', { kind: 'moves', step: 'Moves' }),
+    N('live', 460, 40, 170, 58, 'stock_masters', 'Live on-hand', { kind: 'stock_live', table: 'stock_masters', step: 'Live' }),
+    N('close', 670, 40, 170, 58, 'closing_stocks', 'EOD system snap', { kind: 'closing', table: 'closing_stocks', step: 'Close' }),
+    N('phys', 40, 180, 170, 60, 'Physical count', 'Clipboard / app', { kind: 'physical', step: 'Count' }),
+    N('ex', 250, 170, 170, 60, 'Count > system', 'MS Purchase excess', { kind: 'type_ms_in', table: 'purchase_master', step: 'Excess' }),
+    N('sh', 460, 170, 170, 60, 'Count < system', 'MS Sales shortage', { kind: 'type_ms_out', table: 'sales', step: 'Shortage' }),
+    N('eq', 670, 170, 170, 60, 'Count = system', 'No MS document', { kind: 'equal', step: 'Equal' }),
+    N('sc1', 40, 320, 230, 60, 'Scenario: purchase only', 'Open 12 + buy 3 = 15', { kind: 'sc_buy', step: 'Buy' }),
+    N('sc2', 300, 320, 230, 60, 'Scenario: CK dispatch', 'CK 40 − SL 3 = 37', { kind: 'sc_sl', step: 'Dispatch' }),
+    N('sc3', 560, 320, 230, 60, 'Scenario: POS burger', 'Onion −36 GMS', { kind: 'sc_pos', step: 'POS' }),
+    N('sc4', 820, 320, 230, 60, 'Scenario: wastage', 'WA → Summary E', { kind: 'sc_wa', step: 'Waste' })
+  ];
+  const edges = [
+    E('z1', 'open', 'moves', { kind:'info', label: 'start', why:'Opening feeds the day.' }), E('z2', 'moves', 'live', { kind:'info', label: 'apply', why:'Movements update live stock.' }),
+    E('z3', 'live', 'close', { kind:'info', label: 'night', why:'EOD snapshot from live stock.' }),
+    E('z4', 'close', 'open', { kind:'link', label: 'next A', why:'Tomorrow opening = today close.' }),
+    E('z5', 'phys', 'ex', { kind:'stockin', why:'Count high → MS purchase excess (stock in).' }), E('z6', 'phys', 'sh', { kind:'stockout', why:'Count low → MS sales shortage (stock out).' }), E('z7', 'phys', 'eq', { kind:'info', why:'No document when count matches.' }),
+    E('z8', 'ex', 'live', { kind:'stockin', why:'Excess posts into live stock.' }), E('z9', 'sh', 'live', { kind:'stockout', why:'Shortage posts out of live stock.' })
+  ];
+  return {
+    width: 1100, height: 440, nodes, edges,
+    branchPaths: {
+      physical: { nodes: ['phys', 'ex', 'sh', 'eq', 'live'], edges: ['z5', 'z6', 'z7', 'z8', 'z9'] },
+      type_ms_in: { nodes: ['phys', 'ex', 'live', 'close'], edges: ['z5', 'z8', 'z3'] },
+      type_ms_out: { nodes: ['phys', 'sh', 'live', 'close'], edges: ['z6', 'z9', 'z3'] },
+      equal: { nodes: ['phys', 'eq', 'live', 'close'], edges: ['z7', 'z3'] },
+      sc_buy: { nodes: ['open', 'moves', 'live', 'close', 'sc1'], edges: ['z1', 'z2', 'z3'] },
+      sc_sl: { nodes: ['open', 'moves', 'live', 'close', 'sc2'], edges: ['z1', 'z2', 'z3'] },
+      sc_pos: { nodes: ['open', 'moves', 'live', 'close', 'sc3'], edges: ['z1', 'z2', 'z3'] },
+      sc_wa: { nodes: ['open', 'moves', 'live', 'close', 'sc4'], edges: ['z1', 'z2', 'z3'] },
+      closing: { nodes: ['open', 'moves', 'live', 'close'], edges: ['z1', 'z2', 'z3', 'z4'] },
+      open: { nodes: ['open', 'moves', 'live', 'close'], edges: ['z1', 'z2', 'z3', 'z4'] },
+      stock_live: { nodes: ['open', 'moves', 'live', 'close'], edges: ['z1', 'z2', 'z3'] },
+      moves: { nodes: ['open', 'moves', 'live', 'close'], edges: ['z1', 'z2', 'z3'] }
+    }
+  };
+}
+
+function graphPos() {
+  const nodes = [
+    N('menu', 40, 40, 160, 54, 'Menu item', 'Mumbai Burger', { kind: 'menu', step: 'Menu' }),
+    N('rec', 240, 40, 200, 60, 'recipe_masters', 'recipe_item_id + qty', { kind: 'recipe', table: 'recipe_masters', step: 'Recipe' }),
+    N('rm', 480, 40, 170, 54, 'raw_materials', 'Onion-(fluctuate)', { kind: 'master', table: 'raw_materials', step: 'RM' }),
+    N('pos', 40, 180, 180, 60, 'POS order', '3 × Mumbai Burger', { kind: 'pos', step: 'POS' }),
+    N('con', 260, 180, 220, 68, 'consume_item_details', '12g × 3 = 36 GMS', { kind: 'consume', table: 'consume_item_details', stock: true, step: 'Consume' }),
+    N('stock', 520, 180, 180, 60, 'stock_masters ↓', 'Onion reduces', { kind: 'stock_out', table: 'stock_masters', stock: true, step: 'Stock' }),
+    N('d', 740, 180, 150, 60, 'Summary D', 'Consumed', { kind: 'sum_d', step: 'D' }),
+    N('warn', 260, 320, 460, 58, 'Not inventory sales', 'Exclude order_from=SL from POS totals', { kind: 'note_pos', step: 'Guard' })
+  ];
+  const edges = [
+    E('r1', 'menu', 'rec', { kind:'link', label: 'item_id', join: 'recipe_masters.item_id = items.id', why:'Recipe definition — no stock yet.' }),
+    E('r2', 'rec', 'rm', { kind:'link', label: 'recipe_item_id', join: 'recipe_item_id = raw_materials.id', why:'Which RM the recipe uses.' }),
+    E('r3', 'pos', 'con', { kind:'consume', label: 'explode', join: 'order + item → recipe', why:'Bill explodes recipe into theoretical consumption.' }),
+    E('r4', 'rec', 'con', { kind:'consume', label: 'qty math', join: 'qty = recipe_item_qty × item_qty', why:'Consumption qty from recipe.' }),
+    E('r5', 'con', 'stock', { kind:'consume', label: 'item_id', why:'POS consume reduces live stock (Summary D).' }),
+    E('r6', 'con', 'd', { kind:'info', label: 'D', why:'Stock Summary column D.' })
+  ];
+  return { width: 960, height: 420, nodes, edges };
+}
+
+const GRAPHS = { supplier: graphSupplier, ck: graphCK, purchase: graphPurchase, sales: graphSales, closing: graphClosing, pos: graphPos };
+
+function importantCols(table, names) {
+  const all = SCHEMA[table] || [];
+  if (!names?.length) return all.slice(0, 12);
+  const set = new Set(names);
+  const picked = all.filter((c) => set.has(c.name));
+  return picked.length ? picked : all.slice(0, 12);
+}
+
+const DETAIL = {
+  po: () => ({
+    title: 'How this PO is raised',
+    blurb: 'A purchase order / indent records demand. It never updates stock_masters by itself.',
+    tags: ['No stock move', 'po_request'],
+    pathLabel: 'PO header',
+    how: [
+      'At the restaurant, open Inventory → Purchase Order.',
+      'Choose receiver: Supplier (S) or Central Kitchen / Store / Restaurant (C / ST / R).',
+      'Add raw materials with qty, unit and rate — these become PO item lines.',
+      'Save (record_status 1) then Send (2). request_number is assigned (e.g. PO0046858271).',
+      'Supplier path: later book purchase with po_type=PO and po_id=this PO id.',
+      'CK path: CK posts inventory sales SL first; restaurant books purchase with po_type=SO and po_id=sales.id.'
+    ],
+    kv: [
+      ['PO id', String(EX.po.id)], ['request_number', EX.po.request_number],
+      ['restaurant_id', String(EX.restaurant.id)], ['record_status', EX.po.record_status],
+      ['total / tax', `${EX.po.total} / ${EX.po.total_tax}`], ['Clean table', 'fct_po_requests']
+    ],
+    example: `<div class="ex"><strong>Example — PO raised</strong>Restaurant <b>${esc(EX.restaurant.name)}</b> raises <b>${esc(EX.po.request_number)}</b> on ${esc(EX.po.request_date)}.<br>Row <span class="mono">po_request.id=${EX.po.id}</span> — stock does not change yet.<div class="rule">po_request moves no stock</div></div>`,
+    table: 'po_request',
+    focus: ['id', 'restaurant_id', 'receiver_id', 'receiver_type', 'request_number', 'request_date', 'record_status', 'status', 'total', 'total_tax', 'type', 'payment_flag']
+  }),
+  po_items: () => ({
+    title: 'What PO items contain',
+    blurb: 'One row per requested raw material. Join to header on po_id.',
+    tags: ['Lines', 'Still no stock'],
+    how: ['item_id → raw_materials.id', 'unit → restaurant_units.id; lbl_unit is display (CAS, KG…)', 'qty × price = amount', 'Compare later to sale_item_details (sent) and purchase_item_details (received)'],
+    kv: [['Join', `po_id = ${EX.po.id}`], ['Clean', 'fct_po_request_items']],
+    example: `<div class="ex"><strong>Example — PO lines</strong>${EX.po_items.map((i) => `• <b>${esc(i.itemname)}</b> · ${i.qty} ${esc(i.lbl_unit)} · ₹${i.amount} <span class="mono">(item_id ${i.item_id})</span>`).join('<br>')}<div class="rule">po_item.po_id = po_request.id</div></div>`,
+    table: 'po_requests_item_detail_reports',
+    focus: ['pkid', 'po_id', 'item_id', 'itemname', 'unit', 'lbl_unit', 'qty', 'price', 'amount', 'category']
+  }),
+  purchase_po: () => ({
+    title: 'Purchase against supplier PO',
+    blurb: 'Third-party path: purchase.po_id stores the PO id. Clean layer renames this to source_po_request_key when po_type_code=PO.',
+    tags: ['Stock in', 'po_type = PO'],
+    how: ['type = PU', `po_id = po_request.id (${EX.po.id})`, "po_type = 'PO'", 'receiver_type = S', 'Post → restaurant stock ↑'],
+    kv: [['purchase.id', String(EX.purchase_po.id)], ['po_id', String(EX.purchase_po.po_id)], ['po_type', 'PO'], ['Clean', 'fct_purchases.source_po_request_key']],
+    example: `<div class="ex"><strong>Third-party rule</strong><div class="rule">purchase_master.po_id = po_request.id\npurchase_master.po_type = 'PO'\n(clean: source_po_request_key)</div>Invoice ${esc(EX.purchase_po.invoice_number)} → Fries ${EX.stock.before}→${EX.stock.after_in} ${EX.stock.unit}.</div>`,
+    table: 'purchase_master',
+    focus: ['id', 'type', 'po_id', 'po_type', 'receiver_id', 'receiver_type', 'invoice_number', 'invoice_date', 'total', 'record_status', 'status']
+  }),
+  purchase_so: () => ({
+    title: 'Purchase against CK sales (SO)',
+    blurb: 'After CK dispatch, restaurant GRN uses the sales id as po_id. Clean: source_stock_outward_key when po_type_code=SO.',
+    tags: ['Stock in', 'po_id = sales.id'],
+    how: ['CK created sales SL', `purchase.po_id = sales.id (${EX.sales.id})`, "po_type = 'SO'", 'Restaurant stock ↑; CK already ↓ on SL'],
+    kv: [['purchase.id', String(EX.purchase_so.id)], ['po_id (sales id)', String(EX.purchase_so.po_id)], ['po_type', 'SO'], ['Original PO', String(EX.po.id)], ['Clean', 'source_stock_outward_key']],
+    example: `<div class="ex"><strong>Sales becomes po_id</strong><div class="rule">purchase_master.po_id = sales.id\npurchase_master.po_type = 'SO'\n(clean: source_stock_outward_key)</div>Not the PO id. The sale row is the source document for this purchase.</div>`,
+    table: 'purchase_master',
+    focus: ['id', 'type', 'po_id', 'po_type', 'receiver_id', 'receiver_type', 'invoice_number']
+  }),
+  purchase_items: () => ({
+    title: 'Purchase line contents',
+    blurb: 'Inward RM lines drive stock and average price.',
+    tags: ['Qty in'],
+    example: `<div class="ex"><strong>Received</strong>• French Fries · 3 CAS<br>• Burger Bun · 200 PCS</div>`,
+    table: 'purchase_item_details',
+    focus: ['id', 'item_id', 'unit', 'qty', 'price', 'amount', 'status']
+  }),
+  sales_sl: () => ({
+    title: 'CK / outlet sales (dispatch)',
+    blurb: 'Inventory sales is stock outward. restaurant_id = SENDING outlet. sender_id = receiving party.',
+    tags: ['Stock out at sender', '≠ POS'],
+    how: ['CK opens Sale/Transfer against restaurant PO', 'Header type SL; lines in sale_item_details', 'CK stock_masters decreases on post', 'Restaurant later purchases with po_id=this sales.id, po_type=SO'],
+    kv: [['sales.id', String(EX.sales.id)], ['restaurant_id (sender)', String(EX.sales.restaurant_id)], ['sender_id (receiver)', String(EX.sales.sender_id)], ['Linked PO', String(EX.sales.po_id)], ['Clean', 'fct_stock_outward']],
+    example: `<div class="ex"><strong>Dispatch</strong><span class="mono">sales.id=${EX.sales.id}</span> answers PO ${EX.po.id}.<br>Later this id appears as <b>purchase.po_id</b> with <b>po_type=SO</b>.<div class="rule">sales.restaurant_id = SENDER\nsales.sender_id = RECEIVER</div></div>`,
+    table: 'sales',
+    focus: ['id', 'restaurant_id', 'restaurant_type', 'type', 'sender_id', 'sender_type', 'po_id', 'invoice_number', 'invoice_date', 'total', 'record_status', 'status']
+  }),
+  sale_items: () => ({
+    title: 'Sale item lines',
+    blurb: 'Raw materials leaving the sender.',
+    tags: ['Outward lines'],
+    example: `<div class="ex"><strong>Lines</strong>${EX.sale_items.map((i) => `• ${esc(i.itemname)} · ${i.qty} ${esc(i.unit)}`).join('<br>')}</div>`,
+    table: 'sale_item_details',
+    focus: ['id', 'sale_id', 'item_id', 'unit', 'qty', 'price', 'weighted_price', 'amount']
+  }),
+  sales_header: () => DETAIL.type_sl(),
+  purchase_header: () => DETAIL.type_pu(),
+  type_pu: () => ({ title: 'Purchase type PU', blurb: 'Normal goods receipt. Summary B.', tags: ['Summary B'], example: `<div class="ex"><strong>PU</strong> Against PO ${EX.po.id} · po_type PO · Fries +3.</div>`, table: 'purchase_master', focus: ['type', 'po_id', 'po_type'] }),
+  type_sr: () => ({ title: 'Purchase type SR', blurb: 'Sale return inward — stock up. Summary B.', tags: ['Summary B'], example: `<div class="ex"><strong>SR</strong> 1 CAS Fries returned into stock.</div>`, table: 'purchase_master', focus: ['type'] }),
+  type_ms_in: () => ({ title: 'Purchase MS — excess', blurb: 'Physical count higher than system. Summary C.', tags: ['Summary C'], example: `<div class="ex"><strong>Excess</strong> System 15 · count 18 → MS +3.</div>`, table: 'purchase_master', focus: ['type'] }),
+  type_it_in: () => ({ title: 'Purchase IT — production output', blurb: 'Production/conversion output. Not outlet transfer. Summary I.', tags: ['Summary I'], example: `<div class="ex"><strong>IT in</strong> Inputs leave via IT sales; output enters via IT purchase.</div>`, table: 'purchase_master', focus: ['type'] }),
+  type_sl: () => ({ title: 'Sales SL', blurb: 'Dispatch / sale / transfer from sender. Summary G. May create receiver purchase SO.', tags: ['Summary G'], example: `<div class="ex"><strong>SL</strong> CK sales ${EX.sales.id} → restaurant GRN with po_id=sales.id.</div>`, table: 'sales', focus: ['id', 'type', 'restaurant_id', 'sender_id', 'po_id'] }),
+  type_pr: () => ({ title: 'Sales PR', blurb: 'Purchase return to supplier. Stock out. No SO purchase.', tags: ['Summary G'], example: `<div class="ex"><strong>PR</strong> Return damaged Fries to supplier.</div>`, table: 'sales', focus: ['type'] }),
+  type_wa: () => ({ title: 'Sales WA', blurb: 'Wastage write-off. Summary E.', tags: ['Summary E'], example: `<div class="ex"><strong>WA</strong> 2 Kg paneer expired.</div>`, table: 'sales', focus: ['type'] }),
+  type_ms_out: () => ({ title: 'Sales MS — shortage', blurb: 'Count lower than system. Summary H.', tags: ['Summary H'], example: `<div class="ex"><strong>Shortage</strong> System 15 · count 10 → −5.</div>`, table: 'sales', focus: ['type'] }),
+  type_it_out: () => ({ title: 'Sales IT — production input', blurb: 'Inputs consumed by production. Summary I.', tags: ['Summary I'], example: `<div class="ex"><strong>IT out</strong> Flour −10 Kg while output posts as IT purchase.</div>`, table: 'sales', focus: ['type'] }),
+  stock_in: () => ({ title: 'Live stock increases', blurb: 'Inward documents raise on-hand and average price.', tags: ['stock_masters'], example: `<div class="ex"><strong>Before</strong> ${EX.stock.item} ${EX.stock.before} ${EX.stock.unit}<br><strong>After</strong> ${EX.stock.after_in} ${EX.stock.unit}</div>`, table: 'stock_masters', focus: ['item_id', 'item_name', 'qty', 'avg_purchase_price', 'stock_update_date'] }),
+  stock_out: () => ({ title: 'Live stock decreases', blurb: 'Outward sales or POS consumption reduce on-hand at that outlet.', tags: ['stock_masters'], example: `<div class="ex"><strong>Sender after outward</strong> ${EX.stock.item} qty falls.</div>`, table: 'stock_masters', focus: ['item_id', 'qty'] }),
+  stock_live: () => DETAIL.stock_in(),
+  closing: () => ({
+    title: 'How closing stock works',
+    blurb: 'closing_stocks is the system EOD picture. Physical gaps are posted as MS documents.',
+    tags: ['Snapshot', 'Not physical'],
+    how: [
+      'During the day stock_masters changes with every posted document.',
+      'Nightly job writes closing_stocks per RM / unit / department.',
+      'Next day Opening (A) = yesterday closing.',
+      'If count > system → MS purchase excess (C). If count < system → MS sales shortage (H).'
+    ],
+    example: `<div class="ex"><strong>EOD</strong> System close is not the clipboard count. Difference uses MS docs.<div class="rule">closing_stocks = system snapshot</div></div>`,
+    table: 'closing_stocks',
+    focus: ['item_id', 'item_name', 'qty', 'avg_purchase_price', 'days0', 'days15', 'days30', 'unit_name']
+  }),
+  open: () => ({ title: 'Opening stock (A)', blurb: 'Opening for a day = previous closing_stocks.', example: `<div class="ex"><strong>Opening</strong> Fries 12 CAS from yesterday close.</div>`, table: 'closing_stocks', focus: ['qty', 'item_name'] }),
+  moves: () => ({ title: 'Day movements', blurb: 'Purchases, inventory sales, POS consume, production IT.', example: `<div class="ex">+PU · −SL · −POS · ±IT → live qty → EOD.</div>` }),
+  physical: () => ({ title: 'Physical count', blurb: 'Compare clipboard to stock_masters.', how: ['Higher → MS purchase excess', 'Lower → MS sales shortage', 'Equal → nothing'], example: `<div class="ex">Hover Excess / Shortage / Equal.</div>` }),
+  equal: () => ({ title: 'Count matches', blurb: 'No MS document.', example: `<div class="ex">Count 15 = system 15.</div>` }),
+  sc_buy: () => ({ title: 'Scenario: purchase only', blurb: 'Opening + PU ≈ closing (ignoring other moves).', example: `<div class="ex">12 + 3 PU = 15 close.</div>` }),
+  sc_sl: () => ({ title: 'Scenario: CK dispatch', blurb: 'Sender loses on SL; receiver gains only after PU SO.', example: `<div class="ex">CK 40 − 3 SL = 37. Restaurant +3 after GRN.</div>` }),
+  sc_pos: () => ({ title: 'Scenario: POS', blurb: 'Recipe explosion writes consume_item_details.', example: `<div class="ex">${EX.recipe.menu} × ${EX.recipe.sold} → ${EX.recipe.consume} ${EX.recipe.unit} ${EX.recipe.rm}.</div>` }),
+  sc_wa: () => ({ title: 'Scenario: wastage', blurb: 'WA outward · Summary E.', example: `<div class="ex">WA 2 Kg → stock −2.</div>` }),
+  recipe: () => ({ title: 'Recipe row', blurb: 'Links menu item/addon to raw material qty.', example: `<div class="ex"><strong>Recipe</strong> ${esc(EX.recipe.menu)} needs ${EX.recipe.per} ${EX.recipe.unit} ${esc(EX.recipe.rm)} each.</div>`, table: 'recipe_masters', focus: ['recipe_for', 'parent_item_id', 'item_id', 'recipe_item_id', 'recipe_item_unit', 'recipe_item_qty', 'Addon_id'] }),
+  consume: () => ({ title: 'POS consumption', blurb: 'Theoretical usage after bill. cost = avg price × qty.', example: `<div class="ex"><strong>Consume</strong> ${EX.recipe.sold}× burger → ${EX.recipe.consume} ${EX.recipe.unit} onion.</div>`, table: 'consume_item_details', focus: ['order_id', 'item_id', 'item_qty', 'recipe_item_id', 'qty', 'unit_name', 'price', 'cost', 'order_from'] }),
+  pos: () => ({ title: 'POS order', blurb: 'Triggers recipe explosion — not inventory sales.', example: `<div class="ex">3 × Mumbai Burger settled on POS.</div>` }),
+  menu: () => ({ title: 'Menu item', blurb: 'Sellable item with recipe rows.', example: `<div class="ex">Mumbai Burger → raw_materials via recipe.</div>` }),
+  master: () => ({ title: 'Raw material master', blurb: 'What can be purchased, dispatched, cooked, consumed.', example: `<div class="ex"><strong>RM</strong> French Fries · purchase unit, consumption unit, conversion_qty, WA/FIFO/LIFO.</div>`, table: 'raw_materials', focus: ['id', 'name', 'type', 'unit', 'consumption_unit', 'conversion_qty', 'consumption_type', 'price', 'sale_price', 'minimum_stock', 'at_par_stock'] }),
+  party: () => ({ title: 'Party', blurb: 'Restaurant, CK or Supplier on the document.', example: `<div class="ex">Rest ${EX.restaurant.id} · CK ${EX.ck.id} · Supplier ${EX.supplier.id}</div>` }),
+  note_supplier: () => ({ title: 'Third-party path note', blurb: 'No inventory sales table on this path.', example: `<div class="ex"><div class="rule">purchase.po_id = po_request.id\npo_type = PO</div></div>` }),
+  note_ck: () => ({ title: 'CK path key rule', blurb: 'Sale id becomes purchase po_id.', example: `<div class="ex"><div class="rule">Supplier: po_id = PO.id (PO)\nCK: po_id = sales.id (SO)\n\nsales.restaurant_id = SENDER\nsales.sender_id = RECEIVER</div></div>` }),
+  note_pos: () => ({ title: 'Do not double-count', blurb: 'order_from=SL rows are written by stock documents.', example: `<div class="ex">Exclude SL consume rows when adding to outward totals.</div>` }),
+  potype: () => ({
+    title: 'po_type + po_id on purchase',
+    blurb: 'Same two Excel columns, two meanings. Clean layer splits them into source_po_request_key vs source_stock_outward_key.',
+    tags: ['Critical join'],
+    how: ["po_type=PO → po_id points to po_request.id", "po_type=SO → po_id points to sales.id (dispatch)"],
+    example: `<div class="ex"><strong>Remember</strong><div class="rule">PO path: po_id=${EX.po.id}, po_type=PO\nSales path: po_id=${EX.sales.id}, po_type=SO</div></div>`,
+    table: 'purchase_master',
+    focus: ['po_id', 'po_type', 'type']
+  }),
+  sum_b: () => ({ title: 'Stock Summary B', blurb: 'Purchase + SR inward.', example: `<div class="ex">+3 CAS Fries from PU.</div>` }),
+  sum_c: () => ({ title: 'Stock Summary C', blurb: 'MS excess.', example: `<div class="ex">+3 from count.</div>` }),
+  sum_d: () => ({ title: 'Stock Summary D', blurb: 'POS theoretical consumption.', example: `<div class="ex">−36 GMS onion.</div>` }),
+  sum_e: () => ({ title: 'Stock Summary E', blurb: 'Wastage outward.', example: `<div class="ex">WA write-off.</div>` }),
+  sum_g: () => ({ title: 'Stock Summary G', blurb: 'Transfer / SL / PR outward.', example: `<div class="ex">CK dispatch or purchase return.</div>` }),
+  sum_h: () => ({ title: 'Stock Summary H', blurb: 'MS shortage.', example: `<div class="ex">−5 from count.</div>` }),
+  sum_i: () => ({ title: 'Stock Summary I', blurb: 'Production IT in and out.', example: `<div class="ex">IT pair documents.</div>` })
+};
+
+const KIND_WHY = {
+  link: 'Document / master join only — does not change stock_masters by itself.',
+  stockin: 'Stock inward — qty enters live stock (purchase, excess, production out).',
+  stockout: 'Stock outward — qty leaves sender stock (dispatch, return, wastage, shortage, production in).',
+  consume: 'POS theoretical consumption from recipe — reduces stock as Summary D.',
+  info: 'Reporting / snapshot link (summary column or EOD close), not a separate movement type.'
+};
+function edgeDetail(e) {
+  const kind = e.kind || (e.dash ? 'link' : 'info');
+  return {
+    title: e.label ? `Join: ${e.label}` : 'Join line',
+    blurb: e.why || KIND_WHY[kind] || 'Connection on this flow.',
+    tags: [{link:'Doc link',stockin:'Stock in',stockout:'Stock out',consume:'POS consume',info:'Info'}[kind] || kind],
+    kv: [['Kind', kind], ['From', e.a], ['To', e.b], ['Join', e.join || '—'], ['Why', e.why || KIND_WHY[kind]]],
+    example: `<div class="ex"><strong>Example on this line</strong>${esc(e.example || 'Part of the active path.')}<div class="rule">${esc(e.why || KIND_WHY[kind])}${e.join ? '\n' + esc(e.join) : ''}</div></div>`,
+    joinText: e.join || ''
+  };
+}
+
+/* ========== State ========== */
+let section = 'flows';
+let flow = 'supplier';
+let graph = null;
+let activeNodes = new Set();
+let activeEdges = setFrom([]);
+let selectedNode = null;
+let pathLocked = false; // false = show full diagram; true = highlight clicked path
+let schemaTable = Object.keys(SCHEMA)[0];
+let schemaQ = '';
+
+function setFrom(arr) { return new Set(arr); }
+
+function applyDefaultPath() {
+  const f = FLOWS.find((x) => x.id === flow);
+  activeNodes = setFrom(f.defaultPath);
+  activeEdges = setFrom(f.defaultEdges);
+  selectedNode = null;
+  pathLocked = false; // overview: nothing washed out
+}
+
+function pathForNode(kind, nodeId) {
+  const bp = graph.branchPaths?.[kind] || graph.branchPaths?.[nodeId];
+  if (bp) return bp;
+  // walk: highlight default path but emphasize node + incident edges
+  const f = FLOWS.find((x) => x.id === flow);
+  const nodes = new Set(f.defaultPath);
+  nodes.add(nodeId);
+  const edges = new Set(f.defaultEdges);
+  graph.edges.forEach((e) => {
+    if (e.a === nodeId || e.b === nodeId) edges.add(e.id);
+  });
+  // also include connected default-path neighbors
+  graph.edges.forEach((e) => {
+    if (edges.has(e.id)) { nodes.add(e.a); nodes.add(e.b); }
+  });
+  return { nodes: [...nodes], edges: [...edges] };
+}
+
+function renderInspector(detail, pathSteps) {
+  if (!detail) {
+    $('#insp').innerHTML = `<div class="insp-empty">Click a node to highlight its path and see joins, columns, and a worked example.</div>`;
+    return;
+  }
+  const tags = (detail.tags || []).map((t) => `<span class="tag on">${esc(t)}</span>`).join(' ');
+  const steps = (pathSteps || []).map((s) => `<span class="${s.on ? 'on' : ''}">${esc(s.label)}</span>`).join('');
+  const kv = (detail.kv || []).map(([k, v]) => `<b>${esc(k)}</b><span>${esc(v)}</span>`).join('');
+  const how = detail.how?.length ? `<div class="panel"><h3>How it happens</h3><div class="p"><ol class="steps">${detail.how.map((x) => `<li>${x}</li>`).join('')}</ol></div></div>` : '';
+  let cols = '';
+  if (detail.table) {
+    const list = importantCols(detail.table, detail.focus || []);
+    cols = `<div class="panel"><h3>Columns · ${esc(detail.table)}</h3><div class="p" style="padding:0"><table class="coltable"><thead><tr><th>Column</th><th>Meaning</th></tr></thead><tbody>${list.map((c) => `<tr><td class="mono">${esc(c.name)}</td><td>${esc(c.desc)}${c.ds ? ` <span class="tag">${esc(c.ds)}</span>` : ''}</td></tr>`).join('')}</tbody></table></div></div>`;
+  }
+  const joinBox = detail.joinText ? `<div class="panel"><h3>Join columns</h3><div class="p"><div class="mono" style="white-space:pre-wrap">${esc(detail.joinText)}</div></div></div>` : '';
+  $('#insp').innerHTML = `<div class="insp-head"><div class="eye">Path detail</div><h2>${esc(detail.title)}</h2><p>${esc(detail.blurb || '')}</p><div style="margin-top:8px">${tags}</div>${steps ? `<div class="pathsteps">${steps}</div>` : ''}</div><div class="insp-body">${detail.example || ''}${joinBox}${kv ? `<div class="panel"><h3>Fields</h3><div class="p"><div class="kv">${kv}</div></div></div>` : ''}${how}${cols}<div><button class="btn" id="btnClearSel">Clear node selection</button></div></div>`;
+}
+
+function pathStepsUI() {
+  const f = FLOWS.find((x) => x.id === flow);
+  const ids = pathLocked ? [...activeNodes] : f.defaultPath;
+  const seen = new Set();
+  const ordered = [];
+  ids.forEach((id) => {
+    const n = graph.nodes.find((x) => x.id === id);
+    const label = n?.step || n?.title || id;
+    if (seen.has(label)) return;
+    seen.add(label);
+    ordered.push({ id, label, on: pathLocked ? activeNodes.has(id) : true });
+  });
+  return ordered;
+}
+
+function renderSvg() {
+  const g = graph;
+  const map = Object.fromEntries(g.nodes.filter((n) => !n.lane).map((n) => [n.id, n]));
+  const edges = g.edges.map((e) => {
+    const A = map[e.a], B = map[e.b];
+    if (!A || !B) return '';
+    const on = pathLocked && activeEdges.has(e.id);
+    const dim = pathLocked && !activeEdges.has(e.id);
+    const d = edgePath(A, B);
+    const pt = edgeLabelPoint(A, B);
+    const kind = e.kind || (e.dash ? 'link' : 'info');
+    const marker = on ? `url(#arrow-${kind}-on)` : `url(#arrow-${kind})`;
+    const lab = e.label ? `<text class="elabel ${kind} ${on ? 'on' : ''}" x="${pt.x}" y="${pt.y}" text-anchor="middle">${esc(e.label)}</text>` : '';
+    return `<path class="edge ${kind} ${e.dash || kind==='link' ? 'dash' : ''} ${on ? 'on' : dim ? 'dim' : ''}" data-edge="${esc(e.id)}" marker-end="${marker}" d="${d}"/>${lab}`;
+  }).join('');
+  const nodes = g.nodes.filter((n) => !n.lane).map((n) => {
+    const on = pathLocked && activeNodes.has(n.id);
+    const dim = pathLocked && !activeNodes.has(n.id);
+    const sel = selectedNode === n.id;
+    const badge = n.stock === false
+      ? `<rect class="badge-bg soft" x="${n.x + n.w - 52}" y="${n.y + 6}" width="46" height="13" rx="2"/><text class="badge" x="${n.x + n.w - 29}" y="${n.y + 16}" text-anchor="middle">NO STOCK</text>`
+      : n.stock === true
+        ? `<rect class="badge-bg" x="${n.x + n.w - 42}" y="${n.y + 6}" width="36" height="13" rx="2"/><text class="badge" x="${n.x + n.w - 24}" y="${n.y + 16}" text-anchor="middle">STOCK</text>`
+        : '';
+    return `<g class="node ${on ? 'on' : ''} ${dim ? 'dim' : ''} ${sel ? 'selected' : ''}" data-node="${esc(n.id)}" data-kind="${esc(n.kind || '')}">
+      <rect class="box" x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="3"/>
+      ${badge}
+      <text x="${n.x + 12}" y="${n.y + 24}">${esc(String(n.title).split('\n')[0])}</text>
+      <text class="sub" x="${n.x + 12}" y="${n.y + 42}">${esc(n.sub || '')}</text>
+    </g>`;
+  }).join('');
+  const mk = (id, fill) => `<marker id="${id}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="${fill}"/></marker>`;
+  return `<svg viewBox="0 0 ${g.width} ${g.height}" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      ${mk('arrow-link','#b7a58a')}${mk('arrow-link-on','#9a7b4f')}
+      ${mk('arrow-stockin','#7a9e8a')}${mk('arrow-stockin-on','#3f7a5c')}
+      ${mk('arrow-stockout','#c4928e')}${mk('arrow-stockout-on','#b85c55')}
+      ${mk('arrow-consume','#8aa3c4')}${mk('arrow-consume-on','#4a6fa5')}
+      ${mk('arrow-info','#9aa3ad')}${mk('arrow-info-on','#5c6b7a')}
+    </defs>
+    ${edges}${nodes}
+  </svg>`;
+}
+
+function showNode(kind, id) {
+  selectedNode = id;
+  pathLocked = true;
+  const p = pathForNode(kind, id);
+  activeNodes = setFrom(p.nodes);
+  activeEdges = setFrom(p.edges);
+  paintDiagram();
+  const fn = DETAIL[kind];
+  const detail = typeof fn === 'function' ? fn() : { title: id, blurb: '', example: `<div class="ex">${esc(id)}</div>` };
+  renderInspector(detail, pathStepsUI());
+  $('#hoverHint').innerHTML = `<b>Path locked:</b> ${esc(kind || id)} · click Reset path to show everything again`;
+}
+
+function showEdge(id) {
+  const e = graph.edges.find((x) => x.id === id);
+  if (!e) return;
+  pathLocked = true;
+  activeEdges = setFrom([e.id]);
+  activeNodes = setFrom([e.a, e.b]);
+  // keep connected path context for the edge's kind branch if available
+  graph.edges.forEach((x) => {
+    if (x.a === e.a || x.b === e.b || x.a === e.b || x.b === e.a) {
+      if (x.kind === e.kind) { activeEdges.add(x.id); activeNodes.add(x.a); activeNodes.add(x.b); }
+    }
+  });
+  selectedNode = null;
+  paintDiagram();
+  renderInspector(edgeDetail(e), pathStepsUI());
+}
+
+function paintDiagram() {
+  $('#diagram').innerHTML = renderSvg();
+}
+
+function mountFlow() {
+  const f = FLOWS.find((x) => x.id === flow);
+  $('#title').textContent = f.title;
+  $('#subtitle').textContent = f.subtitle;
+  $('#legend').textContent = f.legend;
+  graph = GRAPHS[flow]();
+  applyDefaultPath();
+  paintDiagram();
+  // intro detail for flow
+  const introKind = { supplier: 'po', ck: 'po', purchase: 'type_pu', sales: 'type_sl', closing: 'closing', pos: 'recipe' }[flow];
+  renderInspector(DETAIL[introKind](), pathStepsUI());
+  $('#hoverHint').innerHTML = `<b>Full diagram</b> — all steps visible. Click a node or line to highlight only that path.`;
+}
+
+function pageOverview() {
+  return `<div class="panelpage">
+    <div class="grid3" style="margin-bottom:12px">
+      <div class="stat"><strong>12</strong><span>Excel schema tables</span></div>
+      <div class="stat"><strong>6</strong><span>Entry flow diagrams</span></div>
+      <div class="stat"><strong>${Object.values(SCHEMA).reduce((n, c) => n + c.length, 0)}</strong><span>Documented columns</span></div>
+    </div>
+    <div class="card"><h2>What this file covers</h2><div class="pad">
+      <p style="margin:0 0 10px;color:var(--muted)">One page for inventory entry: raise PO, PO lines, supplier purchase vs CK sales→purchase, all purchase/sales types, closing stock, recipe→POS consume, schema browser, clean-table map, and status codes. Click <b>Flow diagrams</b> then use the chip bar.</p>
+      <div class="callout"><b>PO ≠ stock.</b> Raising a PO only records demand. Stock changes when purchase posts or inventory sales (outward) posts.</div>
+      <div class="callout" style="margin-top:8px"><b>Two “sales”.</b> Table <span class="mono">sales</span> = raw-material dispatch between outlets/CK. POS guest sale uses recipes → <span class="mono">consume_item_details</span>.</div>
+      <div class="callout" style="margin-top:8px"><b>po_id meanings.</b> On purchase: po_type PO → po_id = po_request.id. po_type SO → po_id = sales.id. On sales: restaurant_id is sender; sender_id is receiver.</div>
+    </div></div>
+    <div class="card"><h2>Open a flow</h2><div class="pad grid3">
+      ${FLOWS.map((f) => `<button class="mod" data-open-flow="${f.id}"><strong>${esc(f.n)}. ${esc(f.label)}</strong><small>${esc(f.subtitle.slice(0, 110))}…</small></button>`).join('')}
+    </div></div>
+  </div>`;
+}
+
+function pageSummary() {
+  const cells = [
+    ['A', 'Opening', 'Prior day closing_stocks'], ['B', 'Purchase', 'PU + SR inward'], ['C', 'Excess', 'MS inward'],
+    ['D', 'Consumed', 'POS consume_item_details'], ['E', 'Wastage', 'WA outward'], ['F', 'Normal loss', 'RM yield rules'],
+    ['G', 'Transfer', 'SL + PR outward'], ['H', 'Shortage', 'MS outward'], ['I', 'Production', 'IT in and out']
+  ];
+  return `<div class="panelpage"><div class="card"><h2>Stock Summary columns A–I</h2><div class="pad">
+    <div class="ssgrid">${cells.map(([c, t, s]) => `<div class="sscell"><div class="c">${c}</div><b>${t}</b><span>${s}</span></div>`).join('')}</div>
+    <p class="mono" style="margin-top:14px">Closing ≈ A + B + C − D − E − F − G − H ± I</p>
+    <p style="color:var(--muted)">Qty reconciliations use consumption units. IT is production/conversion — not outlet transfer (that is SL out + PU in).</p>
+  </div></div></div>`;
+}
+
+function pageSchema() {
+  const names = Object.keys(SCHEMA);
+  const q = schemaQ.trim().toLowerCase();
+  const filtered = names.filter((n) => !q || n.includes(q) || SCHEMA[n].some((c) => (c.name + c.desc + c.ds).toLowerCase().includes(q)));
+  if (!filtered.includes(schemaTable)) schemaTable = filtered[0] || names[0];
+  const cols = SCHEMA[schemaTable] || [];
+  return `<div class="panelpage"><div class="card"><h2>Schema tables (Excel)</h2><div class="pad">
+    <input id="schemaSearch" class="chip" style="border-radius:3px;width:100%;max-width:420px;margin-bottom:10px;padding:8px 10px" placeholder="Search tables or columns…" value="${esc(schemaQ)}">
+    <div class="catalog">
+      <div class="card" style="margin:0"><div class="result-list">${filtered.map((n) => `<button class="result ${n === schemaTable ? 'selected' : ''}" data-stable="${esc(n)}"><strong>${esc(n)}</strong><div class="sub">${SCHEMA[n].length} columns</div></button>`).join('')}</div></div>
+      <div class="card" style="margin:0"><h2>${esc(schemaTable)} <span class="tag">${cols.length} cols</span></h2>
+        <div style="max-height:70vh;overflow:auto"><table class="data-table"><thead><tr><th>#</th><th>Column</th><th>Description</th><th>DS</th></tr></thead>
+        <tbody>${cols.map((c) => `<tr><td>${esc(c.no)}</td><td class="mono">${esc(c.name)}</td><td>${esc(c.desc)}</td><td>${esc(c.ds)}</td></tr>`).join('')}</tbody></table></div>
+      </div>
+    </div>
+  </div></div></div>`;
+}
+
+function pageClean() {
+  return `<div class="panelpage"><div class="card"><h2>Excel → clean table map</h2>
+    <div style="overflow:auto"><table class="data-table"><thead><tr><th>Excel / raw</th><th>Clean table</th><th>Role</th><th>Stock effect</th></tr></thead>
+    <tbody>${CLEAN_MAP.map((r) => `<tr><td class="mono">${esc(r.raw)}</td><td class="mono">${esc(r.clean)}</td><td>${esc(r.role)}</td><td>${esc(r.effect)}</td></tr>`).join('')}</tbody></table></div></div>
+    <div class="card"><h2>Beyond the Excel workbook</h2><div class="pad grid2">${EXTRA.map((e) => `<div><strong class="mono" style="font-size:12px">${esc(e.name)}</strong><p style="margin:4px 0 0;color:var(--muted)">${esc(e.note)}</p></div>`).join('')}</div></div>
+  </div>`;
+}
+
+function pageCodes() {
+  const blocks = [
+    ['PO record_status', '0 Cancelled / Processed · 1 Saved · 2 Sent'],
+    ['PO status', '0 Inactive · 1 Active'],
+    ['PO receiver_type', 'R Restaurant · C Central Kitchen · S Supplier · ST Store'],
+    ['purchase_master.type', 'PU Purchase · SR Sale return · MS Manual stock · IT Production/conversion output'],
+    ['purchase po_type', 'PO → po_id = po_request.id · SO → po_id = sales.id · empty = typed in'],
+    ['sales roles', 'restaurant_id = SENDER · sender_id = RECEIVER'],
+    ['sales types', 'SL Sale/Transfer/Dispatch · PR Purchase return · WA Wastage · MS Shortage · IT Production input'],
+    ['RM type', 'R Raw · S Semi-cooked'],
+    ['RM consumption_type', '0 Weighted Average · 1 FIFO · 2 LIFO'],
+    ['recipe_for', '1 Item · 3 Addon'],
+    ['Payment mode', '1 Cash · 2 Card · 3 Cheque · 4 Other · 5 Online']
+  ];
+  return `<div class="panelpage"><div class="card"><h2>Status & type codes</h2>
+    <table class="data-table"><thead><tr><th>Field</th><th>Values</th></tr></thead>
+    <tbody>${blocks.map(([a, b]) => `<tr><td>${esc(a)}</td><td>${esc(b)}</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function renderShell() {
+  $('#navLinks').innerHTML = SECTIONS.map((s) => `<button data-section="${s.id}" class="${section === s.id ? 'active' : ''}">${esc(s.label)}</button>`).join('');
+  const showFlows = section === 'flows';
+  $('#flowbar').style.display = showFlows ? 'flex' : 'none';
+  if (showFlows) {
+    $('#flowbar').innerHTML = FLOWS.map((f) => `<button class="chip ${flow === f.id ? 'active' : ''}" data-flow="${f.id}"><span class="n">${f.n}</span>${esc(f.label)}</button>`).join('');
+  }
+  const work = document.querySelector('.work');
+  if (section === 'flows') {
+    work.innerHTML = `<section class="canvas">
+      <div class="tools">
+        <span class="pill"><i class="in"></i> Stock in <span style="opacity:.7">(qty enters)</span></span>
+        <span class="pill"><i class="out"></i> Stock out <span style="opacity:.7">(qty leaves)</span></span>
+        <span class="pill"><i class="con"></i> POS consume <span style="opacity:.7">(recipe)</span></span>
+        <span class="pill"><i class="link"></i> Doc link <span style="opacity:.7">(no stock)</span></span>
+        <span class="pill"><i class="info"></i> Info / EOD</span>
+        <span class="sp"></span>
+        <span id="hoverHint"></span>
+      </div>
+      <div class="diagram" id="diagram"></div>
+      <div class="legend" id="legend"></div>
+    </section>
+    <aside class="insp" id="insp"></aside>`;
+    mountFlow();
+  } else {
+    $('#title').textContent = SECTIONS.find((s) => s.id === section).label;
+    $('#subtitle').textContent = 'Same one-page file — overview, Stock Summary, Excel schema, clean-table map, and codes.';
+    const body = { overview: pageOverview, summary: pageSummary, schema: pageSchema, cleantables: pageClean, codes: pageCodes }[section]();
+    work.innerHTML = `<div style="grid-column:1/-1">${body}</div>`;
+  }
+}
+
+document.addEventListener('click', (e) => {
+  const sec = e.target.closest('[data-section]');
+  if (sec) { section = sec.dataset.section; renderShell(); return; }
+  const fl = e.target.closest('[data-flow]');
+  if (fl) { flow = fl.dataset.flow; section = 'flows'; renderShell(); return; }
+  const of = e.target.closest('[data-open-flow]');
+  if (of) { flow = of.dataset.openFlow; section = 'flows'; renderShell(); return; }
+  const st = e.target.closest('[data-stable]');
+  if (st) { schemaTable = st.dataset.stable; renderShell(); return; }
+  if (e.target.closest('#btnClearSel') || e.target.closest('#btnResetPath')) {
+    if (section === 'flows') { applyDefaultPath(); paintDiagram(); renderInspector(DETAIL[{ supplier: 'po', ck: 'po', purchase: 'type_pu', sales: 'type_sl', closing: 'closing', pos: 'recipe' }[flow]](), pathStepsUI()); }
+    return;
+  }
+  if (e.target.closest('#btnDl')) {
+    const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Petpooja_Inventory_Entry_Flow.html'; a.click();
+  }
+  const n = e.target.closest('[data-node]');
+  if (n && section === 'flows') { showNode(n.dataset.kind, n.dataset.node); return; }
+  const ed = e.target.closest('[data-edge]');
+  if (ed && section === 'flows') showEdge(ed.dataset.edge);
+});
+
+document.addEventListener('input', (e) => {
+  if (e.target.id === 'schemaSearch') { schemaQ = e.target.value; renderShell(); }
+});
+
+renderShell();
+
+</script>
+</body>
+</html>
