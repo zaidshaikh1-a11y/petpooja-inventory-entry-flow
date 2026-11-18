@@ -78,7 +78,7 @@ button{font:inherit;cursor:pointer}
 .node.on .box,.node:hover .box{stroke:var(--path);stroke-width:1.75}
 .node.soft .box{stroke:#aeb4bc}
 .node.selected .box{stroke:var(--ink);stroke-width:2}
-.badge-bg{fill:#1d1d1f}.badge{font-size:9px;font-weight:600;fill:#fff}
+.badge-bg{fill:#f5f5f7}.badge{font-size:8.5px;font-weight:600;fill:#6e6e73}
 .edge{fill:none;stroke:#c9cdd3;stroke-width:1.35;pointer-events:stroke;cursor:pointer}
 .edge.link{stroke:#b7a58a;stroke-dasharray:6 5;stroke-width:1.3} /* doc join, no stock */
 .edge.stockin{stroke:#7a9e8a} /* goods / qty into stock */
@@ -808,9 +808,9 @@ function renderSvg() {
     const dim = pathLocked && !activeNodes.has(n.id);
     const sel = selectedNode === n.id;
     const badge = n.stock === false
-      ? `<rect class="badge-bg soft" x="${n.x + n.w - 52}" y="${n.y + 6}" width="46" height="13" rx="2"/><text class="badge" x="${n.x + n.w - 29}" y="${n.y + 16}" text-anchor="middle">NO STOCK</text>`
+      ? `<rect x="${n.x + n.w - 54}" y="${n.y + 7}" width="48" height="14" rx="2" fill="#f5f5f7" stroke="#d2d2d7" stroke-width="1"/><text x="${n.x + n.w - 30}" y="${n.y + 17}" text-anchor="middle" fill="#6e6e73" font-size="8.5" font-weight="600" font-family="var(--font)">no stock</text>`
       : n.stock === true
-        ? `<rect class="badge-bg" x="${n.x + n.w - 42}" y="${n.y + 6}" width="36" height="13" rx="2"/><text class="badge" x="${n.x + n.w - 24}" y="${n.y + 16}" text-anchor="middle">STOCK</text>`
+        ? `<rect x="${n.x + n.w - 44}" y="${n.y + 7}" width="38" height="14" rx="2" fill="#eef6f1" stroke="#b7d0c2" stroke-width="1"/><text x="${n.x + n.w - 25}" y="${n.y + 17}" text-anchor="middle" fill="#3f7a5c" font-size="8.5" font-weight="600" font-family="var(--font)">stock</text>`
         : '';
     return `<g class="node ${on ? 'on' : ''} ${dim ? 'dim' : ''} ${sel ? 'selected' : ''}" data-node="${esc(n.id)}" data-kind="${esc(n.kind || '')}">
       <rect class="box" x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="3"/>
