@@ -160,6 +160,32 @@ button{font:inherit;cursor:pointer}
 .anim-progress > div{height:100%;background:linear-gradient(90deg,#7a9e8a,var(--accent));transition:width .4s ease}
 @media(max-width:900px){.anim-stage{grid-template-columns:1fr}}
 
+.node.dir-in .box{stroke:#b7d0c2}
+.node.dir-out .box{stroke:#e0c0bc}
+.duo{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:stretch;margin:4px 0 12px;min-height:120px}
+.outlet{display:flex;border:1px solid var(--line);border-radius:3px;background:#fff;overflow:hidden;min-height:110px;opacity:.55;transition:opacity .35s,box-shadow .35s,border-color .35s}
+.outlet.on{opacity:1;border-color:#c7c7cc;box-shadow:0 6px 18px #0000000d}
+.outlet-side{width:6px;background:#e8e8ed;flex:0 0 6px}
+.outlet.side-in .outlet-side{background:#a8d5b5}
+.outlet.side-out .outlet-side{background:#e8b4b0}
+.outlet-body{padding:12px 14px;flex:1}
+.outlet-role{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.outlet strong{display:block;margin:4px 0 6px;font-size:14px;letter-spacing:-.01em}
+.outlet-qty{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+.outlet-tip{font-size:11.5px;color:var(--muted);margin-top:4px}
+.bridge{position:relative;width:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+.bridge-line{width:100%;height:2px;background:#d2d2d7;border-radius:2px;position:relative;overflow:hidden}
+.bridge.ltr .bridge-line,.bridge.rtl .bridge-line{background:linear-gradient(90deg,#d2d2d7,#a8d5b5,#d2d2d7)}
+.bridge.moving .bridge-line::after{content:"";position:absolute;top:-3px;width:10px;height:8px;border-radius:2px;background:var(--accent);animation:goods 1.4s ease-in-out infinite}
+.bridge.ltr.moving .bridge-line::after{animation-name:goodsL}
+.bridge.rtl.moving .bridge-line::after{animation-name:goodsR}
+@keyframes goodsL{0%{left:0;opacity:0}10%{opacity:1}90%{opacity:1}100%{left:calc(100% - 10px);opacity:0}}
+@keyframes goodsR{0%{right:0;left:auto;opacity:0}10%{opacity:1}90%{opacity:1}100%{right:calc(100% - 10px);left:auto;opacity:0}}
+.bridge-packet{font-size:11px;font-weight:600;color:#424245;text-align:center;max-width:110px;line-height:1.3;min-height:28px}
+.bridge-caption{font-size:16px;color:var(--accent);font-weight:700;height:18px}
+.bridge.empty .bridge-line{opacity:.35}
+@media(max-width:900px){.duo{grid-template-columns:1fr}.bridge{width:100%;padding:8px 0}}
+
 </style>
 </head>
 <body>
@@ -174,7 +200,7 @@ button{font:inherit;cursor:pointer}
   </nav>
   <div class="sub">
     <h1 id="title">Inventory entry flow</h1>
-    <p id="subtitle">Animated live examples under Supplier / Purchase / Sales / CK — Play walks stock step by step.</p>
+    <p id="subtitle">Green/red side strips = stock up/down. Two-outlet Play stories for PO, CK, every purchase & sales type.</p>
     <div class="flowbar" id="flowbar"></div>
   </div>
   <div class="work"></div>
@@ -807,16 +833,18 @@ function renderSvg() {
     const on = pathLocked && activeNodes.has(n.id);
     const dim = pathLocked && !activeNodes.has(n.id);
     const sel = selectedNode === n.id;
-    const badge = n.stock === false
-      ? `<rect x="${n.x + n.w - 54}" y="${n.y + 7}" width="48" height="14" rx="2" fill="#f5f5f7" stroke="#d2d2d7" stroke-width="1"/><text x="${n.x + n.w - 30}" y="${n.y + 17}" text-anchor="middle" fill="#6e6e73" font-size="8.5" font-weight="600" font-family="var(--font)">no stock</text>`
-      : n.stock === true
-        ? `<rect x="${n.x + n.w - 44}" y="${n.y + 7}" width="38" height="14" rx="2" fill="#eef6f1" stroke="#b7d0c2" stroke-width="1"/><text x="${n.x + n.w - 25}" y="${n.y + 17}" text-anchor="middle" fill="#3f7a5c" font-size="8.5" font-weight="600" font-family="var(--font)">stock</text>`
+    const dir = stockDirOf(n);
+    const strip = dir === 'in'
+      ? `<rect x="${n.x}" y="${n.y}" width="5" height="${n.h}" rx="2" fill="#a8d5b5"/>`
+      : dir === 'out'
+        ? `<rect x="${n.x}" y="${n.y}" width="5" height="${n.h}" rx="2" fill="#e8b4b0"/>`
         : '';
-    return `<g class="node ${on ? 'on' : ''} ${dim ? 'dim' : ''} ${sel ? 'selected' : ''}" data-node="${esc(n.id)}" data-kind="${esc(n.kind || '')}">
+    const padX = dir ? 16 : 12;
+    return `<g class="node ${on ? 'on' : ''} ${dim ? 'dim' : ''} ${sel ? 'selected' : ''} ${dir ? 'dir-' + dir : ''}" data-node="${esc(n.id)}" data-kind="${esc(n.kind || '')}">
       <rect class="box" x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="3"/>
-      ${badge}
-      <text x="${n.x + 12}" y="${n.y + 24}">${esc(String(n.title).split('\n')[0])}</text>
-      <text class="sub" x="${n.x + 12}" y="${n.y + 42}">${esc(n.sub || '')}</text>
+      ${strip}
+      <text x="${n.x + padX}" y="${n.y + 24}">${esc(String(n.title).split('\n')[0])}</text>
+      <text class="sub" x="${n.x + padX}" y="${n.y + 42}">${esc(n.sub || '')}</text>
     </g>`;
   }).join('');
   const mk = (id, fill) => `<marker id="${id}" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="${fill}"/></marker>`;
@@ -865,6 +893,17 @@ function showEdge(id) {
   selectedNode = null;
   paintDiagram();
   renderInspector(edgeDetail(e), pathStepsUI());
+}
+
+
+function stockDirOf(n) {
+  if (n.stockDir === 'in' || n.stockDir === 'out') return n.stockDir;
+  const k = n.kind || '';
+  const t = String(n.title || '');
+  if (t.includes('↑') || k === 'stock_in' || k.startsWith('purchase') || k === 'type_pu' || k === 'type_sr' || k === 'type_ms_in' || k === 'type_it_in' || k === 'sum_b' || k === 'sum_c') return 'in';
+  if (t.includes('↓') || k === 'stock_out' || k === 'sales_sl' || k === 'sale_items' || k === 'sales_header' || k === 'type_sl' || k === 'type_pr' || k === 'type_wa' || k === 'type_ms_out' || k === 'type_it_out' || k === 'consume' || k === 'sum_e' || k === 'sum_g' || k === 'sum_h') return 'out';
+  if (n.stock === false) return null;
+  return null;
 }
 
 function paintDiagram() {
@@ -966,50 +1005,33 @@ function pageCodes() {
 /* ===== Live animated examples (appended) ===== */
 const LIVE_STORIES = {
   supplier: {
-    title: 'Live example — Restaurant raises PO → Supplier → Purchase (PU)',
-    pick: [
-      { id: 'supplier', label: 'PO → Supplier → PU' }
-    ],
+    title: 'Restaurant raises PO → Supplier sends goods → Purchase',
+    pick: [{ id: 'supplier', label: 'PO → Supplier → PU' }],
     steps: [
-      {
-        title: '1. Restaurant needs stock',
-        actors: ['Restaurant: AJ & Co', 'Stock: French Fries 12 CAS'],
-        docs: 'No document yet',
-        stock: { fries: 12, note: 'Live stock_masters' },
-        say: 'Kitchen is short on fries. Manager will raise a purchase order to the supplier — not to CK.'
-      },
-      {
-        title: '2. Raise PO (no stock move)',
-        actors: ['Restaurant → Supplier (S)'],
-        docs: 'po_request id=46858271 · PO0046858271 · record_status=Sent',
-        stock: { fries: 12, note: 'Still 12 — PO never changes stock' },
-        say: 'PO lines: 3 CAS French Fries @ ₹1601.75. receiver_type = S.'
-      },
-      {
-        title: '3. Supplier fulfils (outside Petpooja stock)',
-        actors: ['Supplier: Radhakrishna Foodland'],
-        docs: 'Commercial invoice INV-RK-88421',
-        stock: { fries: 12, note: 'Restaurant stock unchanged until GRN' },
-        say: 'Goods are on the way. Inventory sales table is NOT used on this third-party path.'
-      },
-      {
-        title: '4. Restaurant books Purchase type=PU',
-        actors: ['Restaurant GRN'],
-        docs: "purchase_master type=PU · po_type=PO · po_id=46858271 (= PO id)",
-        stock: { fries: 15, note: '12 + 3 = 15 CAS' },
-        say: 'purchase_item_details posts +3 CAS. This is when stock_masters rises (Summary B).'
-      },
-      {
-        title: '5. EOD closing',
-        actors: ['closing_stocks'],
-        docs: 'Nightly snapshot',
-        stock: { fries: 15, note: 'System close (not physical count)' },
-        say: 'Next day Opening A starts from this closing qty.'
-      }
+      { title: '1. Need stock', say: 'Restaurant is short on fries and will raise a PO to the supplier.', docs: 'No document yet',
+        scene: { left: { name: 'AJ & Co (Restaurant)', role: 'Buyer', qty: 'Fries 12 CAS', tip: 'Needs stock' }, right: { name: 'Foodland (Supplier)', role: 'Supplier S', qty: 'Warehouse', tip: 'Not raised yet' }, goods: null, dir: 'none', highlight: 'left' } },
+      { title: '2. Raise PO', say: 'PO0046858271 sent to supplier. Stock does NOT move yet.', docs: 'po_request · receiver_type=S · 3 CAS Fries',
+        scene: { left: { name: 'AJ & Co (Restaurant)', role: 'Raises PO', qty: 'Fries 12 CAS', tip: 'PO sent' }, right: { name: 'Foodland (Supplier)', role: 'Receives PO', qty: 'Sees demand', tip: 'Fulfil next' }, goods: 'PO request', dir: 'ltr', highlight: 'both' } },
+      { title: '3. Goods from supplier', say: 'Supplier ships fries. Still no restaurant stock change until GRN.', docs: 'Invoice INV-RK-88421',
+        scene: { left: { name: 'AJ & Co (Restaurant)', role: 'Waiting GRN', qty: 'Fries 12 CAS', tip: 'Awaiting goods' }, right: { name: 'Foodland (Supplier)', role: 'Ships goods', qty: '3 CAS Fries', tip: 'On the way' }, goods: '3 CAS Fries', dir: 'rtl', highlight: 'right' } },
+      { title: '4. Purchase PU posts', say: 'Restaurant books purchase type=PU, po_type=PO, po_id=PO id. Stock rises.', docs: "purchase type=PU · po_type=PO · po_id=46858271",
+        scene: { left: { name: 'AJ & Co (Restaurant)', role: 'GRN / Purchase', qty: 'Fries 15 CAS ↑', tip: 'Stock in', side: 'in' }, right: { name: 'Foodland (Supplier)', role: 'Supplier', qty: 'Delivered', tip: 'Done' }, goods: 'GRN +3 CAS', dir: 'rtl', highlight: 'left' } }
+    ]
+  },
+  ck: {
+    title: 'Restaurant PO → CK Sales (dispatch) → Restaurant Purchase',
+    pick: [{ id: 'ck', label: 'PO → Sales → Purchase' }],
+    steps: [
+      { title: '1. Raise indent PO', say: 'Restaurant raises PO to Central Kitchen (receiver_type=C). No stock move.', docs: 'po_request → CK',
+        scene: { left: { name: 'AJ & Co (Restaurant)', role: 'Raises PO', qty: 'Fries 12', tip: 'Indent' }, right: { name: 'CK Andheri', role: 'Receiver C', qty: 'Fries 40', tip: 'Will dispatch' }, goods: 'PO indent', dir: 'ltr', highlight: 'left' } },
+      { title: '2. CK Sales SL', say: 'CK posts inventory sales SL. CK is SENDER — its stock falls.', docs: 'sales.id=63545401 type=SL',
+        scene: { left: { name: 'AJ & Co (Restaurant)', role: 'Waiting', qty: 'Fries 12', tip: 'Not received yet' }, right: { name: 'CK Andheri', role: 'Sender / SL', qty: 'Fries 37 ↓', tip: 'Stock out', side: 'out' }, goods: 'Dispatch 3 CAS', dir: 'rtl', highlight: 'right' } },
+      { title: '3. Restaurant Purchase SO', say: 'Restaurant GRN: po_type=SO and po_id=sales.id (sale becomes po_id). Stock up.', docs: "purchase PU · po_type=SO · po_id=sales.id",
+        scene: { left: { name: 'AJ & Co (Restaurant)', role: 'Purchase SO', qty: 'Fries 15 ↑', tip: 'Stock in', side: 'in' }, right: { name: 'CK Andheri', role: 'Already dispatched', qty: 'Fries 37', tip: 'Done' }, goods: 'GRN against sales id', dir: 'rtl', highlight: 'left' } }
     ]
   },
   purchase: {
-    title: 'Live examples — all restaurant purchase types',
+    title: 'All restaurant purchase types — live two-party view',
     pick: [
       { id: 'pu', label: 'PU normal buy' },
       { id: 'sr', label: 'SR sale return in' },
@@ -1018,103 +1040,135 @@ const LIVE_STORIES = {
     ],
     stories: {
       pu: {
-        title: 'PU — normal purchase (goods in from supplier or outlet)',
+        title: 'PU — normal purchase from supplier',
         steps: [
-          { title: 'Before', actors: ['Restaurant stock'], docs: '—', stock: { fries: 12 }, say: 'Need more fries from supplier.' },
-          { title: 'Post purchase_master.type = PU', actors: ['Supplier → Restaurant'], docs: 'po_type=PO, po_id=PO id (or SO if from CK sales)', stock: { fries: 15 }, say: 'Normal buy. Stock ↑. Summary column B (Purchase).' },
-          { title: 'Result', actors: ['stock_masters'], docs: 'purchase_item_details +3 CAS', stock: { fries: 15 }, say: 'PU is the everyday inward document.' }
+          { title: 'Before buy', say: 'Restaurant needs fries from supplier.', docs: '—',
+            scene: { left: { name: 'Restaurant', role: 'Buyer', qty: 'Fries 12', tip: 'Low stock' }, right: { name: 'Supplier', role: 'Seller', qty: 'Has stock', tip: 'Ready' }, goods: null, dir: 'none', highlight: 'left' } },
+          { title: 'Goods arrive + PU', say: 'Book purchase_master.type=PU. Stock ↑. Summary B.', docs: 'type=PU · often po_type=PO',
+            scene: { left: { name: 'Restaurant', role: 'Purchase PU', qty: 'Fries 15 ↑', tip: 'Stock in', side: 'in' }, right: { name: 'Supplier', role: 'Delivered', qty: '−3 CAS', tip: 'Shipped' }, goods: '3 CAS Fries', dir: 'rtl', highlight: 'left' } }
         ]
       },
       sr: {
-        title: 'SR — sale return inward (goods come back into stock)',
+        title: 'SR — sale return inward (goods come back)',
         steps: [
-          { title: 'Context', actors: ['Earlier you dispatched / sold RM out'], docs: 'Another outlet returns 1 CAS Fries', stock: { fries: 15 }, say: 'SR is NOT a guest POS refund. It is inventory sale-return inward.' },
-          { title: 'Book purchase type = SR', actors: ['Restaurant'], docs: 'purchase_master.type = SR', stock: { fries: 16 }, say: 'Returned case comes back. Stock ↑. Still rolls into Summary B with purchases.' },
-          { title: 'Why SR exists', actors: ['Stock correction via return'], docs: 'Inward counterpart of a return flow', stock: { fries: 16 }, say: 'Use SR when material physically returns into this outlet’s stock.' }
+          { title: 'Return starts', say: 'Another outlet / party returns fries to you. Not a guest POS refund.', docs: 'Return inbound',
+            scene: { left: { name: 'Restaurant (you)', role: 'Receiver', qty: 'Fries 15', tip: 'Will take return' }, right: { name: 'Other outlet', role: 'Returning', qty: '1 CAS Fries', tip: 'Sending back' }, goods: 'Return 1 CAS', dir: 'rtl', highlight: 'right' } },
+          { title: 'Book SR', say: 'purchase type=SR. Your stock ↑. Summary B.', docs: 'type=SR',
+            scene: { left: { name: 'Restaurant (you)', role: 'SR purchase', qty: 'Fries 16 ↑', tip: 'Stock in', side: 'in' }, right: { name: 'Other outlet', role: 'Returned', qty: 'Done', tip: '—' }, goods: 'SR +1 CAS', dir: 'rtl', highlight: 'left' } }
         ]
       },
       ms: {
-        title: 'MS — manual excess (physical count higher than system)',
+        title: 'MS — excess (count higher than system)',
         steps: [
-          { title: 'System says', actors: ['stock_masters'], docs: 'French Fries = 15 CAS', stock: { fries: 15 }, say: 'Clipboard count finds 18 CAS on the shelf.' },
-          { title: 'Post MS purchase', actors: ['Auditor / manager'], docs: 'purchase_master.type = MS · qty +3', stock: { fries: 18 }, say: 'Excess bridges system up to physical. Summary C (Excess).' },
-          { title: 'Not typed into closing', actors: ['closing_stocks'], docs: 'Still a system snapshot', stock: { fries: 18 }, say: 'Never edit closing directly — always post MS documents.' }
+          { title: 'Count vs system', say: 'System 15, clipboard 18. Same outlet — auditor vs system.', docs: 'Physical count',
+            scene: { left: { name: 'System stock', role: 'stock_masters', qty: '15 CAS', tip: 'Book figure' }, right: { name: 'Physical count', role: 'Clipboard', qty: '18 CAS', tip: 'Shelf reality' }, goods: 'Gap +3', dir: 'rtl', highlight: 'both' } },
+          { title: 'MS purchase posts', say: 'type=MS purchase +3. System rises to 18. Summary C.', docs: 'type=MS',
+            scene: { left: { name: 'System stock', role: 'After MS', qty: '18 CAS ↑', tip: 'Stock in', side: 'in' }, right: { name: 'Physical count', role: 'Matched', qty: '18 CAS', tip: 'Aligned' }, goods: 'MS +3', dir: 'rtl', highlight: 'left' } }
         ]
       },
       it: {
-        title: 'IT — production / conversion inside the SAME outlet',
+        title: 'IT — same outlet: raw → semi / recipe output',
         steps: [
-          { title: 'What IT means', actors: ['Same restaurant / kitchen'], docs: 'Not a transfer to another outlet', stock: { flour: 50, dough: 0 }, say: 'IT = produce or convert: raw → semi-cooked, or run a full production recipe. Outlet-to-outlet is SL out + PU in, not IT.' },
-          { title: 'Inputs leave via IT sales', actors: ['IT sales (outward)'], docs: 'sales type IT: Flour −10 Kg, Water −5 L', stock: { flour: 40, dough: 0 }, say: 'Inputs are consumed in this outlet. Stock out on each input RM (Summary I out).' },
-          { title: 'Output enters via IT purchase', actors: ['IT purchase (inward)'], docs: 'purchase_master.type = IT: Dough (semi) +40 Kg', stock: { flour: 40, dough: 40 }, say: 'Semi-product (type S) or finished prep appears as IT purchase. Stock in on output RM (Summary I in).' },
-          { title: 'Full recipe production example', actors: ['Pizza Base production'], docs: 'Inputs: Flour, Yeast, Oil → Output: 40 Pizza Base', stock: { flour: 40, dough: 40, pizza_base: 40 }, say: 'Engine writes paired IT sales (inputs) + IT purchase (output). Same outlet throughout.' }
+          { title: 'Same kitchen', say: 'IT is NOT another outlet. Convert flour into dough (semi) or run a full production recipe.', docs: 'Same restaurant id',
+            scene: { left: { name: 'Raw store', role: 'Inputs', qty: 'Flour 50 Kg', tip: 'Will consume' }, right: { name: 'Prep / semi', role: 'Output', qty: 'Dough 0', tip: 'Will produce' }, goods: null, dir: 'none', highlight: 'both' } },
+          { title: 'IT sales (inputs out)', say: 'sales type=IT removes Flour −10 Kg inside this outlet.', docs: 'sales type=IT',
+            scene: { left: { name: 'Raw store', role: 'IT sales', qty: 'Flour 40 ↓', tip: 'Stock out', side: 'out' }, right: { name: 'Prep / semi', role: 'Waiting output', qty: 'Dough 0', tip: '—' }, goods: 'Flour consumed', dir: 'ltr', highlight: 'left' } },
+          { title: 'IT purchase (output in)', say: 'purchase type=IT adds Dough +40 Kg (semi) or Pizza Base from full recipe.', docs: 'purchase type=IT',
+            scene: { left: { name: 'Raw store', role: 'Inputs done', qty: 'Flour 40', tip: '—' }, right: { name: 'Prep / semi', role: 'IT purchase', qty: 'Dough 40 ↑', tip: 'Stock in', side: 'in' }, goods: 'Dough produced', dir: 'ltr', highlight: 'right' } }
         ]
       }
     }
   },
   sales: {
-    title: 'Live examples — all inventory sales (outward) types',
+    title: 'All inventory sales types — two-party live view',
     pick: [
       { id: 'sl', label: 'SL dispatch' },
-      { id: 'pr', label: 'PR return to supplier' },
+      { id: 'pr', label: 'PR to supplier' },
       { id: 'wa', label: 'WA wastage' },
       { id: 'ms', label: 'MS shortage' },
       { id: 'it', label: 'IT production in' }
     ],
     stories: {
       sl: {
-        title: 'SL — sale / transfer / CK dispatch (sender stock out)',
+        title: 'SL — CK / outlet dispatch',
         steps: [
-          { title: 'CK has stock', actors: ['CK Andheri'], docs: 'Fries 40 CAS', stock: { fries: 40 }, say: 'Restaurant indent PO is waiting. CK will dispatch.' },
-          { title: 'CK posts sales type SL', actors: ['CK = SENDER'], docs: 'sales.id=63545401 · restaurant_id=CK · sender_id=Restaurant', stock: { fries: 37 }, say: 'CK stock −3. This is inventory sales, not POS.' },
-          { title: 'Restaurant receives later', actors: ['Restaurant GRN'], docs: "purchase type PU · po_type=SO · po_id=sales.id", stock: { fries: 37 }, say: 'Receiver stock rises only on their purchase. Sale id becomes purchase.po_id.' }
+          { title: 'Before dispatch', say: 'CK will fulfil restaurant indent.', docs: 'PO linked',
+            scene: { left: { name: 'Restaurant', role: 'Receiver', qty: 'Fries 12', tip: 'Waiting' }, right: { name: 'CK (Sender)', role: 'Has stock', qty: 'Fries 40', tip: 'Will SL' }, goods: null, dir: 'none', highlight: 'right' } },
+          { title: 'SL posts', say: 'CK sales SL — sender stock ↓. Later restaurant PU with po_id=sales.id.', docs: 'sales type=SL',
+            scene: { left: { name: 'Restaurant', role: 'Not GRN yet', qty: 'Fries 12', tip: 'Still waiting' }, right: { name: 'CK (Sender)', role: 'SL out', qty: 'Fries 37 ↓', tip: 'Stock out', side: 'out' }, goods: '3 CAS dispatch', dir: 'rtl', highlight: 'right' } },
+          { title: 'Restaurant receives', say: 'Purchase SO against sales id — restaurant stock ↑.', docs: 'po_type=SO',
+            scene: { left: { name: 'Restaurant', role: 'Purchase SO', qty: 'Fries 15 ↑', tip: 'Stock in', side: 'in' }, right: { name: 'CK (Sender)', role: 'Done', qty: 'Fries 37', tip: '—' }, goods: 'GRN', dir: 'rtl', highlight: 'left' } }
         ]
       },
       pr: {
-        title: 'PR — purchase return (send RM back to supplier)',
+        title: 'PR — return goods to supplier',
         steps: [
-          { title: 'Damaged stock', actors: ['Restaurant'], docs: '1 CAS Fries damaged', stock: { fries: 15 }, say: 'Return to supplier Foodland.' },
-          { title: 'Post sales type PR', actors: ['Restaurant → Supplier'], docs: 'sales type PR', stock: { fries: 14 }, say: 'Stock out. No receiver purchase SO. Summary G.' }
+          { title: 'Damaged stock', say: 'Send fries back to supplier.', docs: '—',
+            scene: { left: { name: 'Restaurant', role: 'Returning', qty: 'Fries 15', tip: '1 CAS bad' }, right: { name: 'Supplier', role: 'Takes return', qty: '—', tip: 'PR target' }, goods: null, dir: 'none', highlight: 'left' } },
+          { title: 'PR posts', say: 'sales type=PR. Restaurant stock ↓. Summary G.', docs: 'type=PR',
+            scene: { left: { name: 'Restaurant', role: 'PR out', qty: 'Fries 14 ↓', tip: 'Stock out', side: 'out' }, right: { name: 'Supplier', role: 'Received return', qty: '+1 CAS', tip: '—' }, goods: 'Return 1 CAS', dir: 'ltr', highlight: 'left' } }
         ]
       },
       wa: {
         title: 'WA — wastage write-off',
         steps: [
-          { title: 'Spoilage', actors: ['Kitchen'], docs: 'Paneer 2 Kg expired', stock: { paneer: 10 }, say: 'Cannot sell or return.' },
-          { title: 'Post sales type WA', actors: ['Restaurant'], docs: 'sales type WA', stock: { paneer: 8 }, say: 'Stock out. Summary E (Wastage).' }
+          { title: 'Spoilage', say: 'Paneer expired — write off inside outlet.', docs: '—',
+            scene: { left: { name: 'Restaurant store', role: 'Stock', qty: 'Paneer 10 Kg', tip: '2 Kg bad' }, right: { name: 'Wastage bin', role: 'Write-off', qty: '0', tip: 'Not a party transfer' }, goods: null, dir: 'none', highlight: 'left' } },
+          { title: 'WA posts', say: 'sales type=WA. Stock ↓. Summary E.', docs: 'type=WA',
+            scene: { left: { name: 'Restaurant store', role: 'WA out', qty: 'Paneer 8 ↓', tip: 'Stock out', side: 'out' }, right: { name: 'Wastage bin', role: 'Recorded', qty: '2 Kg', tip: 'Summary E' }, goods: 'Wastage 2 Kg', dir: 'ltr', highlight: 'left' } }
         ]
       },
       ms: {
-        title: 'MS — manual shortage (count lower than system)',
+        title: 'MS — shortage (count lower than system)',
         steps: [
-          { title: 'System 15 · count 10', actors: ['stock_masters'], docs: 'Physical short 5 CAS', stock: { fries: 15 }, say: 'Clipboard is below system.' },
-          { title: 'Post sales type MS', actors: ['Auditor'], docs: 'sales type MS · −5', stock: { fries: 10 }, say: 'System caught down. Summary H (Shortage).' }
+          { title: 'Count gap', say: 'System 15, count 10.', docs: 'Physical count',
+            scene: { left: { name: 'System stock', role: 'stock_masters', qty: '15 CAS', tip: 'Book' }, right: { name: 'Physical count', role: 'Clipboard', qty: '10 CAS', tip: 'Shelf' }, goods: 'Gap −5', dir: 'rtl', highlight: 'both' } },
+          { title: 'MS sales', say: 'sales type=MS −5. System ↓. Summary H.', docs: 'type=MS outward',
+            scene: { left: { name: 'System stock', role: 'After MS', qty: '10 CAS ↓', tip: 'Stock out', side: 'out' }, right: { name: 'Physical count', role: 'Matched', qty: '10 CAS', tip: 'Aligned' }, goods: 'MS −5', dir: 'rtl', highlight: 'left' } }
         ]
       },
       it: {
-        title: 'IT — production inputs leaving stock (same outlet)',
+        title: 'IT — production inputs (same outlet)',
         steps: [
-          { title: 'Start production', actors: ['Same kitchen'], docs: 'Convert flour → dough', stock: { flour: 50, dough: 0 }, say: 'IT sales removes inputs; paired IT purchase will add output.' },
-          { title: 'IT sales lines', actors: ['Flour −10 Kg'], docs: 'sales type IT', stock: { flour: 40, dough: 0 }, say: 'Input consumption inside outlet. Not a transfer to another restaurant.' },
-          { title: 'Pair with IT purchase', actors: ['Dough +40 Kg'], docs: 'purchase type IT', stock: { flour: 40, dough: 40 }, say: 'See Purchase → IT story for the inward half.' }
+          { title: 'Consume inputs', say: 'IT sales removes raw materials used to make semi/finished prep.', docs: 'sales type=IT',
+            scene: { left: { name: 'Raw store', role: 'IT sales', qty: 'Flour 50→40 ↓', tip: 'Stock out', side: 'out' }, right: { name: 'Production', role: 'Kitchen', qty: 'Running', tip: 'Same outlet' }, goods: 'Flour in', dir: 'ltr', highlight: 'left' } },
+          { title: 'Output on purchase IT', say: 'Pair with purchase type=IT for dough / recipe output.', docs: 'See Purchase → IT',
+            scene: { left: { name: 'Raw store', role: 'Inputs done', qty: 'Flour 40', tip: '—' }, right: { name: 'Semi / recipe out', role: 'IT purchase', qty: 'Dough 40 ↑', tip: 'Stock in', side: 'in' }, goods: 'Dough out', dir: 'ltr', highlight: 'right' } }
         ]
       }
     }
-  },
-  ck: {
-    title: 'Live example — Indent to CK then receive',
-    pick: [{ id: 'ck', label: 'PO → CK Sales → PU SO' }],
-    steps: [
-      { title: 'Restaurant raises PO to CK', actors: ['receiver_type=C'], docs: 'PO 46858271', stock: { rest_fries: 12, ck_fries: 40 }, say: 'Indent only — no stock move.' },
-      { title: 'CK sales SL', actors: ['CK sender'], docs: 'sales 63545401', stock: { rest_fries: 12, ck_fries: 37 }, say: 'CK stock down.' },
-      { title: 'Restaurant purchase SO', actors: ['po_id = sales.id'], docs: "po_type='SO'", stock: { rest_fries: 15, ck_fries: 37 }, say: 'Restaurant stock up. Sale becomes po_id.' }
-    ]
   }
 };
 
+function outletCard(o, side, active) {
+  if (!o) return '';
+  const sideCls = o.side === 'in' ? 'side-in' : o.side === 'out' ? 'side-out' : '';
+  return `<div class="outlet ${sideCls} ${active ? 'on' : ''}">
+    <div class="outlet-side"></div>
+    <div class="outlet-body">
+      <div class="outlet-role">${esc(o.role || '')}</div>
+      <strong>${esc(o.name || '')}</strong>
+      <div class="outlet-qty">${esc(o.qty || '')}</div>
+      <div class="outlet-tip">${esc(o.tip || '')}</div>
+    </div>
+  </div>`;
+}
+
+function goodsBridge(scene) {
+  if (!scene) return '<div class="bridge empty"></div>';
+  const dir = scene.dir || 'none';
+  const moving = scene.goods ? 'moving' : '';
+  const label = scene.goods ? esc(scene.goods) : '—';
+  return `<div class="bridge ${dir} ${moving}">
+    <div class="bridge-line"></div>
+    <div class="bridge-packet">${label}</div>
+    <div class="bridge-caption">${dir === 'ltr' ? '→' : dir === 'rtl' ? '←' : ''}</div>
+  </div>`;
+}
+
 let animTimer = null;
 let animStep = 0;
-let animStoryKey = null; // e.g. purchase/pu
+let animStoryKey = null;
 let animPlaying = false;
 
 function stopAnim() {
@@ -1145,19 +1199,20 @@ function renderAnimPanel() {
   if (!host) return;
   const pack = currentAnimPack();
   if (!pack) {
-    host.innerHTML = `<div class="anim-empty">Open <b>Supplier PO</b>, <b>Purchase all types</b>, <b>Sales all types</b>, or <b>CK</b> for a live animated example below the diagram.</div>`;
+    host.innerHTML = `<div class="anim-empty">Open <b>Supplier PO</b>, <b>CK</b>, <b>Purchase all types</b>, or <b>Sales all types</b> for a two-outlet live animation.</div>`;
     return;
   }
   const steps = pack.steps;
   if (animStep >= steps.length) animStep = 0;
   const s = steps[animStep];
   const picks = pack.root.pick || [];
-  const stockEntries = Object.entries(s.stock || {}).filter(([k]) => k !== 'note');
   const activePick = pack.sub || (picks[0] && picks[0].id);
+  const scene = s.scene || null;
+  const hl = scene?.highlight || 'both';
   host.innerHTML = `
     <div class="anim-head">
       <div>
-        <div class="anim-eye">Live animated example</div>
+        <div class="anim-eye">Live two-outlet animation</div>
         <strong>${esc(pack.subTitle || pack.root.title)}</strong>
       </div>
       <div class="anim-controls">
@@ -1170,17 +1225,20 @@ function renderAnimPanel() {
     <div class="anim-track">
       ${steps.map((st, i) => `<div class="anim-node ${i === animStep ? 'on' : ''} ${i < animStep ? 'done' : ''}"><span>${i + 1}</span><b>${esc(st.title.replace(/^\d+\.\s*/, ''))}</b></div>${i < steps.length - 1 ? '<div class="anim-pipe"></div>' : ''}`).join('')}
     </div>
+    <div class="duo">
+      ${outletCard(scene?.left, 'left', hl === 'left' || hl === 'both')}
+      ${goodsBridge(scene)}
+      ${outletCard(scene?.right, 'right', hl === 'right' || hl === 'both')}
+    </div>
     <div class="anim-stage">
       <div class="anim-card">
         <h4>${esc(s.title)}</h4>
         <p>${esc(s.say)}</p>
-        <div class="anim-meta"><b>Actors</b><span>${esc((s.actors || []).join(' · '))}</span></div>
         <div class="anim-meta"><b>Documents</b><span class="mono">${esc(s.docs || '—')}</span></div>
       </div>
       <div class="anim-stock">
-        <h4>Stock snapshot</h4>
-        ${stockEntries.map(([k, v]) => `<div class="stock-row"><span>${esc(k)}</span><strong class="pulse">${esc(v)}</strong></div>`).join('') || '<p class="muted">—</p>'}
-        ${s.stock?.note ? `<p class="muted" style="margin-top:8px">${esc(s.stock.note)}</p>` : ''}
+        <h4>What to notice</h4>
+        <p class="muted" style="margin:0;font-size:12.5px;line-height:1.45">Green side = stock up on that party. Red side = stock down. Dashed PO arrow = document only (no stock).</p>
       </div>
     </div>
     <div class="anim-progress"><div style="width:${((animStep + 1) / steps.length) * 100}%"></div></div>
